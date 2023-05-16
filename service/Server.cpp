@@ -7,20 +7,29 @@
 #include <vector>
 #include <iostream>
 #include <thread>
+#include <unordered_map>
 
 #include "../model/dto/SocketData.cpp"
+#include "../model/enums/Actiontype.cpp"
+#include "../model/DroneList.cpp"
 
 #define PORT 1026
 
 int main(int argc, char const* argv[])
 {
+    std::unordered_map<std::string, ActionType> actionTypes = {
+            { "Low battery", ActionType::LOW_BATTERY },
+            { "Add drone", ActionType::ADD_DRONE }
+    };
+
+    DroneList droneList;
 
     int server_fd, new_socket;
     struct sockaddr_in address;
     int opt = 1;
     int addrlen = sizeof(address);
     std::vector<std::thread> threads;
-    std::vector<DroneData> drones;
+
 
     // Creating socket file descriptor
     if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -50,7 +59,7 @@ int main(int argc, char const* argv[])
             exit(EXIT_FAILURE);
         }
 
-        threads.emplace_back([&new_socket, &drones] {
+        threads.emplace_back([&new_socket, &droneList, &actionTypes] {
             int valread;
             char buffer[1024] = { 0 };
             std::string hello = "Hello from server";
@@ -64,7 +73,9 @@ int main(int argc, char const* argv[])
                 DroneData droneData = {0};
                 long client_data = recv(new_socket, &droneData, sizeof(droneData), 0);
                 std::cout << "droneId: " << droneData.droneId << std::endl << "port: " << droneData.port << std::endl << "action: " << droneData.action << std::endl;
-                drones.push_back(droneData);
+                if (actionTypes[droneData.action] == ActionType::ADD_DRONE) {
+                    droneList.addDrone(droneData);
+                }
 
                 std::string client_ans = "The data is received from the server";
                 send(new_socket, client_ans.c_str(), client_ans.length(), 0);
