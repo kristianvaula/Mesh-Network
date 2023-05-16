@@ -3,9 +3,9 @@
 //
 #include "enums/Priority.cpp"
 
-class Drone {
+class Node {
 private:
-    int droneId;
+    int nodeId;
     int port;
     int ipAddress;
     int xPosition;
@@ -13,21 +13,21 @@ private:
     Priority priority;
 
 public:
-    Drone(int droneId, int port, int ipAddress)
-        : droneId(droneId), port(port), ipAddress(ipAddress), xPosition(0), yPosition(0), priority(Priority::NONE) {}
+    Node(int nodeId, int port, int ipAddress)
+        : nodeId(nodeId), port(port), ipAddress(ipAddress), xPosition(0), yPosition(0), priority(Priority::NONE) {}
 
-    Drone(int droneId, int port, int ipAddress, int xPosition, int yPosition, Priority priority)
-        : droneId(droneId), port(port), ipAddress(ipAddress), xPosition(xPosition), yPosition(yPosition),
+    Node(int nodeId, int port, int ipAddress, int xPosition, int yPosition, Priority priority)
+        : nodeId(nodeId), port(port), ipAddress(ipAddress), xPosition(xPosition), yPosition(yPosition),
         priority(priority) {}
 
-    Drone(const Drone& other)
-        : droneId(other.droneId), port(other.port), ipAddress(other.ipAddress), xPosition(other.xPosition),
+    Node(const Node& other)
+        : nodeId(other.nodeId), port(other.port), ipAddress(other.ipAddress), xPosition(other.xPosition),
         yPosition(other.yPosition), priority(other.priority) {}
 
-    Drone(const DroneData& droneData) : droneId(droneData.droneId), port(droneData.port) {}
+    Node(const NodeData& nodeData) : nodeId(nodeData.nodeId), port(nodeData.port) {}
 
-    int getDroneId() const {
-        return droneId;
+    int getNodeId() const {
+        return nodeId;
     }
 
     int getPort() const {

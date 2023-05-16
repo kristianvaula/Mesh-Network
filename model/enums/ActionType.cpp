@@ -1,4 +1,4 @@
 enum class ActionType {
-    REMOVE_DRONE,
-    ADD_DRONE,
+    REMOVE_NODE,
+    ADD_NODE,
 };

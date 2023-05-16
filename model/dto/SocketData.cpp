@@ -1,7 +1,7 @@
 #include <string>
 
-struct DroneData {
-    int droneId;
+struct NodeData {
+    int nodeId;
     int port;
     //int ipAddress;
     std::string action;

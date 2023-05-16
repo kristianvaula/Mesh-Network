@@ -11,18 +11,18 @@
 
 #include "../model/dto/SocketData.cpp"
 #include "../model/enums/Actiontype.cpp"
-#include "../model/DroneList.cpp"
+#include "../model/NodeList.cpp"
 
 #define PORT 1025
 
 int main(int argc, char const* argv[])
 {
     std::unordered_map<std::string, ActionType> actionTypes = {
-            { "REMOVE_DRONE", ActionType::REMOVE_DRONE },
-            { "ADD_DRONE", ActionType::ADD_DRONE }
+            { "REMOVE_NODE", ActionType::REMOVE_NODE },
+            { "ADD_NODE", ActionType::ADD_NODE }
     };
 
-    DroneList droneList;
+    NodeList nodeList;
 
     int server_fd, new_socket;
     struct sockaddr_in address;
@@ -59,7 +59,7 @@ int main(int argc, char const* argv[])
             exit(EXIT_FAILURE);
         }
 
-        threads.emplace_back([&new_socket, &droneList, &actionTypes] {
+        threads.emplace_back([&new_socket, &nodeList, &actionTypes] {
             int valread;
             char buffer[1024] = { 0 };
             std::string hello = "Hello from server";
@@ -70,11 +70,11 @@ int main(int argc, char const* argv[])
                 valread = read(new_socket, buffer, 1024);
                 printf("%s\n", buffer);
 
-                DroneData droneData = {0};
-                long client_data = recv(new_socket, &droneData, sizeof(droneData), 0);
-                std::cout << "droneId: " << droneData.droneId << std::endl << "port: " << droneData.port << std::endl << "action: " << droneData.action << std::endl;
-                if (actionTypes[droneData.action] == ActionType::ADD_DRONE) {
-                    droneList.addDrone(droneData);
+                NodeData nodeData = {0};
+                long client_data = recv(new_socket, &nodeData, sizeof(nodeData), 0);
+                std::cout << "nodeId: " << nodeData.nodeId << std::endl << "port: " << nodeData.port << std::endl << "action: " << nodeData.action << std::endl;
+                if (actionTypes[nodeData.action] == ActionType::ADD_NODE) {
+                    nodeList.addNode(nodeData);
                 }
 
                 std::string client_ans = "The data is received from the server";

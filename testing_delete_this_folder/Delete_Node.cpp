@@ -1,6 +1,3 @@
-//
-// Created by HansMagne Asheim on 16/05/2023.
-//
 // Client side C/C++ program to demonstrate Socket
 // programming
 #include <arpa/inet.h>
@@ -44,15 +41,15 @@ int main(int argc, char const* argv[])
         valread = read(client_fd, buffer, 1024);
         printf("%s\n", buffer);
 
-        std::string hello = "Hello from drone";
+        std::string hello = "Hello from node";
         send(client_fd, hello.c_str(), hello.length(), 0);
 
-        DroneData droneData = {0};
-        droneData.droneId = 1;
-        droneData.port = PORT;
-        droneData.action = "ADD_DRONE";
+        NodeData nodeData = {0};
+        nodeData.nodeId = 1;
+        nodeData.port = PORT;
+        nodeData.action = "ADD_NODE";
 
-        send(client_fd, &droneData, sizeof(droneData), 0);
+        send(client_fd, &nodeData, sizeof(nodeData), 0);
 
         char buffer[1024];
         int valread = recv(client_fd, buffer, sizeof(buffer), 0);
