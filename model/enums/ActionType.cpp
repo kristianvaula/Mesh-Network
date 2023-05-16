@@ -1,4 +1,4 @@
 enum class ActionType {
-    LOW_BATTERY,
+    REMOVE_DRONE,
     ADD_DRONE,
 };
