@@ -1,5 +1,7 @@
 #include "Node.h"
 
+Node::Node() {}
+
 Node::Node(int nodeId, int port, int ipAddress)
         : nodeId(nodeId), port(port), ipAddress(ipAddress), xPosition(0), yPosition(0), priority(Priority::NONE) {
 }
@@ -14,7 +16,8 @@ Node::Node(const Node& other)
           yPosition(other.yPosition), priority(other.priority) {
 }
 
-Node::Node(const NodeData& nodeData) : nodeId(nodeData.nodeId), port(nodeData.port) {
+Node::Node(const NodeData& nodeData) 
+        : nodeId(nodeData.nodeId), port(nodeData.port), ipAddress(0), xPosition(0), yPosition(0), priority(Priority::NONE) {
 }
 
 int Node::getNodeId() const {

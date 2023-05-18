@@ -18,6 +18,7 @@ private:
     Priority priority;
 
 public:
+    Node();
     Node(int nodeId, int port, int ipAddress);
     Node(int nodeId, int port, int ipAddress, int xPosition, int yPosition, Priority priority);
     Node(const Node& other);

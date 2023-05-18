@@ -17,9 +17,15 @@ public:
 
     void addNode(const Node& node);
     void addNode(const NodeData& nodeData);
+    Node getNode(const int nodeId);
     void editNode(const Node& node);
     int getSize() const;
     std::unordered_map<int, Node> getNodesWithPriority(Priority priority) const;
+    
+    /*
+    * Controls is there is one or more nodes in the mesh
+    * Returnes true if there is one or more nodes in the mesh, otherwise false
+    */
     bool isNodeInMesh() const;
 };
 #endif //MESH_NETWORK_NODELIST_H

@@ -15,7 +15,7 @@
 #include "/nettverksprog/mesh-network/model/enums/ActionType.h"
 #include "/nettverksprog/mesh-network/model/NodeList.h"
 
-#define PORT 1028
+#define PORT 1030
 
 class Server {
 private:
@@ -82,7 +82,7 @@ private:
 
         try {
             send(new_socket, hello.c_str(), hello.length(), 0);
-            valread = read(new_socket, buffer, 1024);
+            valread = read(new_socket, buffer, sizeof(buffer));
             printf("%s\n", buffer);
 
             NodeData nodeData = {0};
@@ -90,14 +90,18 @@ private:
             std::cout << "droneId: " << nodeData.nodeId << std::endl
             << "port: " << nodeData.port << std::endl
             << "action: " << nodeData.action << std::endl;
-            if (actionTypes[nodeData.action] == ActionType::ADD_NODE) {
-                std::cout << "Before: Size nodeList: " << nodeList.getSize() << std::endl;
+            if (actionTypes[nodeData.action] == ActionType::HELLO) {
                 nodeList.addNode(nodeData);
-                std::cout << "After: Size nodeList: " << nodeList.getSize() << std::endl;
-            }
+                if (!nodeList.isNodeInMesh()) {
+                    Node nodeListItem = nodeList.getNode(nodeData.nodeId);
+                    nodeListItem.setPriority(Priority::HIGH);//has (0,0) as inital position
+                    memset(buffer, 0, sizeof(buffer));//clear buffer
+                    strcpy(buffer, "MOVETO_");
+                    strcat(buffer, std::to_string(nodeListItem.getXPosition()).c_str());
+                    nodeList.editNode(nodeListItem);
+                    send(new_socket, buffer, sizeof(buffer), 0);
+            }                
 
-            std::string client_ans = "The data is received from the server";
-            send(new_socket, client_ans.c_str(), client_ans.length(), 0);
 
             close(new_socket);
         } catch (...) {
@@ -110,7 +114,8 @@ private:
         int addrlen = sizeof(address);
         actionTypes = {
             { "REMOVE_NODE", ActionType::REMOVE_NODE },
-            { "ADD_NODE", ActionType::ADD_NODE }
+            { "MOVETO", ActionType::MOVETO },
+            { "HELLO", ActionType::HELLO }
         };
 
 

@@ -1,6 +1,8 @@
 //
 // Created by HansMagne Asheim on 16/05/2023.
 //
+#include <iostream>
+
 #include "/nettverksprog/mesh-network/model/NodeList.h"
 
 NodeList::NodeList() {}
@@ -14,9 +16,13 @@ void NodeList::addNode(const NodeData& nodeData) {
     nodes.insert(std::make_pair(node.getNodeId(), node));
 }
 
+Node NodeList::getNode(const int nodeId) {
+    return nodes[nodeId];
+}
+
 void NodeList::editNode(const Node& node) {
     if (nodes.count(node.getNodeId()) > 0) {
-        nodes.insert(std::make_pair(node.getNodeId(), node));
+        nodes[node.getNodeId()] = node;
     }
 }
 
@@ -39,5 +45,5 @@ std::unordered_map<int, Node> NodeList::getNodesWithPriority(Priority priority) 
 }
 
 bool NodeList::isNodeInMesh() const {
-    return nodes.size() > getNodesWithPriority(Priority::NONE).size();
+    return nodes.size() - getNodesWithPriority(Priority::NONE).size() > 0;
 }
