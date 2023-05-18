@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <iostream>
 
-#include "../model/dto/SocketData.cpp"
+#include "/nettverksprog/mesh-network/model/dto/SocketData.h"
 
 #define PORT 1025
 

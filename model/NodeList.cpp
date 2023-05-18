@@ -1,7 +1,7 @@
 //
 // Created by HansMagne Asheim on 16/05/2023.
 //
-#include "NodeList.h"
+#include "/nettverksprog/mesh-network/model/NodeList.h"
 
 NodeList::NodeList() {}
 

@@ -6,7 +6,7 @@
 #define MESH_NETWORK_NODELIST_H
 
 #include <unordered_map>
-#include "Node.h"
+#include "/nettverksprog/mesh-network/model/Node.h"
 
 class NodeList {
 private:

@@ -12,8 +12,8 @@
 #include <thread>
 #include <unordered_map>
 
-#include "../model/enums/ActionType.cpp"
-#include "../model/NodeList.h"
+#include "/nettverksprog/mesh-network/model/enums/ActionType.h"
+#include "/nettverksprog/mesh-network/model/NodeList.h"
 
 #define PORT 1026
 

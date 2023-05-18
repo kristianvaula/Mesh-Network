@@ -5,8 +5,8 @@
 #ifndef MESH_NETWORK_NODE_H
 #define MESH_NETWORK_NODE_H
 
-#include "enums/Priority.cpp"
-#include "dto/SocketData.cpp"
+#include "/nettverksprog/mesh-network/model/enums/Priority.h"
+#include "/nettverksprog/mesh-network/model/dto/SocketData.h"
 
 class Node {
 private:

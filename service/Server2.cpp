@@ -9,9 +9,10 @@
 #include <thread>
 #include <unordered_map>
 
-#include "../model/dto/SocketData.cpp"
-#include "../model/enums/Actiontype.cpp"
-#include "../model/NodeList.cpp"
+
+#include "/nettverksprog/mesh-network/model/dto/SocketData.h"
+#include "/nettverksprog/mesh-network/model/enums/ActionType.h"
+#include "/nettverksprog/mesh-network/model/NodeList.h"
 
 #define PORT 1025
 
