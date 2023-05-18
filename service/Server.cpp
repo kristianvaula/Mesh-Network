@@ -15,7 +15,7 @@
 #include "/nettverksprog/mesh-network/model/enums/ActionType.h"
 #include "/nettverksprog/mesh-network/model/NodeList.h"
 
-#define PORT 1030
+#define PORT 1032
 
 class Server {
 private:
@@ -92,17 +92,18 @@ private:
             << "action: " << nodeData.action << std::endl;
             if (actionTypes[nodeData.action] == ActionType::HELLO) {
                 nodeList.addNode(nodeData);
+                std::cout << "isNodeInMesh1: " << nodeList.isNodeInMesh() << std::endl;
                 if (!nodeList.isNodeInMesh()) {
                     Node nodeListItem = nodeList.getNode(nodeData.nodeId);
                     nodeListItem.setPriority(Priority::HIGH);//has (0,0) as inital position
+                    nodeList.editNode(nodeListItem);
+                    std::cout << "isNodeInMesh1: " << nodeList.isNodeInMesh() << std::endl;
                     memset(buffer, 0, sizeof(buffer));//clear buffer
                     strcpy(buffer, "MOVETO_");
                     strcat(buffer, std::to_string(nodeListItem.getXPosition()).c_str());
-                    nodeList.editNode(nodeListItem);
                     send(new_socket, buffer, sizeof(buffer), 0);
+                }
             }                
-
-
             close(new_socket);
         } catch (...) {
             close(new_socket);
