@@ -15,7 +15,7 @@
 #include "/nettverksprog/mesh-network/model/enums/ActionType.h"
 #include "/nettverksprog/mesh-network/model/NodeList.h"
 
-#define PORT 1026
+#define PORT 1028
 
 class Server {
 private:
@@ -91,7 +91,9 @@ private:
             << "port: " << nodeData.port << std::endl
             << "action: " << nodeData.action << std::endl;
             if (actionTypes[nodeData.action] == ActionType::ADD_NODE) {
+                std::cout << "Before: Size nodeList: " << nodeList.getSize() << std::endl;
                 nodeList.addNode(nodeData);
+                std::cout << "After: Size nodeList: " << nodeList.getSize() << std::endl;
             }
 
             std::string client_ans = "The data is received from the server";
@@ -106,6 +108,11 @@ private:
     void handleConnections() {
         struct sockaddr_in address;
         int addrlen = sizeof(address);
+        actionTypes = {
+            { "REMOVE_NODE", ActionType::REMOVE_NODE },
+            { "ADD_NODE", ActionType::ADD_NODE }
+        };
+
 
         while (run) {
             int new_socket;
