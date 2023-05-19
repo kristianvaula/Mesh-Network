@@ -5,28 +5,34 @@
 #include <unistd.h>
 #include <cstring>
 #include <string>
+#include <chrono>
+#include <list>
 #include <sstream>
 #include <netdb.h>
-#include <stdexcept>
+#include <string_view>
 #include <condition_variable>
 #include <mutex>
+#include <atomic>
+#include <../model/dto/SocketData.hpp>
 
 class Node {
   private: 
     int nodeId; 
+    int x; 
     int serverSocket; 
+    int childSocket; 
     int clientSocket; 
     sockaddr_in nodeAddress{}; 
-    std::thread serverThread; 
-    std::thread clientThread; 
-
-    std::mutex server_mutex; 
-    std::condition_variable cv; 
     std::string serverAddress; 
     std::string serverPort; 
 
-    bool stopServer; 
-    bool stopClient; 
+    std::thread serverThread; 
+    std::thread clientThread; 
+
+    std::mutex mutex; 
+    std::condition_variable cv; 
+    std::atomic<bool> running; 
+    std::list<NodeData> serverJobs; 
 
   public: 
     Node(int id, int port); 
@@ -37,9 +43,14 @@ class Node {
   private: 
     void runServer(); 
     void runClient(); 
+    void simulateMovement(int x);
+    void serializeStruct(const NodeData& data, char* buffer) ; 
+    int handleAction(const NodeData& socketData);
     int serverSetup(); 
     int connectToParent(const std::string& serverAddress, const std::string& serverPort); 
     int greetParent(); 
+    int returnOK();
+    int pushServerjob(const NodeData& socketData); 
 };
 
 Node::Node(int id, int port ) {
@@ -54,8 +65,12 @@ Node::Node(int id, int port ) {
   nodeAddress.sin_port = htons(port); 
 
   nodeId = id; 
-  stopServer = false; 
-  stopClient = false; 
+  x = 0; 
+  running = true; 
+
+  if(this->serverSetup() == -1){
+    return; 
+  } 
 };
 
 void Node::start() {
@@ -64,8 +79,10 @@ void Node::start() {
 };
 
 void Node::stop() {
-  stopServer = true; 
-  stopClient = true; 
+  {
+    std::unique_lock<std::mutex> lock(mutex); 
+    running = false; 
+  }
   serverThread.join(); 
   clientThread.join(); 
   close(serverSocket); 
@@ -73,9 +90,11 @@ void Node::stop() {
 }; 
 
 void Node::setServerInfo(const std::string& serverAddress, const std::string& serverPort) {
-  std::unique_lock<std::mutex> lock(server_mutex);
-  this->serverAddress = serverAddress; 
-  this->serverPort = serverPort; 
+  {
+    std::unique_lock<std::mutex> lock(mutex);
+    this->serverAddress = serverAddress; 
+    this->serverPort = serverPort; 
+  }
   cv.notify_one(); 
 }
 
@@ -84,44 +103,39 @@ Function that the server thread of the node will run.
 Has to handle all operations done by child. 
 */
 void Node::runServer() { 
-  if(this->serverSetup() == -1){
-    return; 
-  } 
 
-  while (!stopServer) {
+  while (running) {
     sockaddr_in clientAddress{}; 
     socklen_t clientAddressSize = sizeof(clientAddress); 
-    int clientSocket = accept(serverSocket, reinterpret_cast<struct sockaddr*>(&clientAddress), &clientAddressSize); 
-    if (clientSocket < 0) {
+    int childSocket = accept(serverSocket, reinterpret_cast<struct sockaddr*>(&clientAddress), &clientAddressSize); 
+    if (childSocket < 0) {
       std::cerr << "Failed to accept connection." << std::endl;
       continue;
     }
 
     std::cout << "Client connected." << std::endl;
 
-    char buffer[1024]; 
+    NodeData socketData; 
     int bytesRead; 
 
-    while ((bytesRead = read(clientSocket, buffer, sizeof(buffer)-1)) > 0 ) {
-      buffer[bytesRead] = '\0'; 
-      std::cout << "Received data from client: " << buffer << std::endl; 
-
-       // Handle the received data and send a response
-
-      std::string response = "Response from server";
-      if (write(clientSocket, response.c_str(), response.length()) < 0) {
-          std::cerr << "Failed to send response." << std::endl;
-          break;
+    while ((bytesRead = read(clientSocket, &socketData, sizeof(socketData))) > 0) {
+      // Handle the received data and send a response
+      std::unique_lock<std::mutex> lock(mutex);
+      if(!serverJobs.empty()){
+        const NodeData& instruction = serverJobs.front();
+        char serializedData[sizeof(NodeData)]; 
+        serializeStruct(instruction, serializedData); 
+        write(childSocket, serializedData, sizeof(serializedData)); 
+        serverJobs.pop_front();
       }
-
-      memset(buffer, 0, sizeof(buffer));
+    
     }
 
     if (bytesRead < 0) {
       std::cerr << "Failed to receive data." << std::endl;
     }
 
-    close(clientSocket);
+    close(childSocket);
   }
  
 }
@@ -131,7 +145,7 @@ Function that the client thread will run in.
 Has to handle all requests by parent server.
 */
 void Node::runClient() {
-  std::unique_lock<std::mutex> lock(server_mutex); 
+  std::unique_lock<std::mutex> lock(mutex); 
   cv.wait(lock, [this]() { return !serverAddress.empty() && !serverPort.empty(); }); 
 
   if(connectToParent(serverAddress, serverPort) == -1) {
@@ -139,10 +153,73 @@ void Node::runClient() {
   }
 
   if(this->greetParent() == -1){
-    return; 
+  return; 
   } 
 
-  close(clientSocket); 
+  while(running) {
+    NodeData socketData; 
+    int bytesRead = read(clientSocket, &socketData, sizeof(socketData)); 
+    
+    if (bytesRead < 0) {
+      std::cerr << "Failed to receive data." << std::endl;
+      break;
+    } else if (bytesRead == 0) {
+
+      std::cout << "Connection closed by the server." << std::endl;
+      break;
+    }
+
+    handleAction(socketData); 
+  }
+}
+
+int Node::handleAction(const NodeData& socketData) {
+  if(socketData.nodeId != nodeId){
+      std::cout << "Received passthrough" << std::endl;
+      pushServerjob(socketData);  
+  }
+
+  std::cout << "Received request with action: " << socketData.action[0] << std::endl;
+
+  std::string divider = "MOVETO_"; 
+  size_t pos = socketData.action.find(divider);  
+
+  if (pos != std::string::npos) { // Case MOVETO
+    int coordinate = std::stoi(socketData.action.substr(divider.length(), socketData.action.length() - 1));
+    simulateMovement(coordinate);
+    std::string portnr = std::to_string(socketData.port);
+    if(connectToParent(socketData.ipAddress, portnr) != -1) {
+      returnOK(); 
+      return 1; 
+    }
+    else return -1; 
+  } else {
+    if (socketData.action == "HELLO") {
+      // Handle 'HELLO' action
+    } else if (socketData.action == "REMOVE_NODE") {
+      // Handle 'REMOVE_NODE' action
+    } else {
+      std::cout << "Received unknown action from server: " << socketData.action << std::endl;
+      return 1; 
+    }
+  } 
+}
+
+/*
+Simulates the time it takes for node to move  
+*/
+void Node::simulateMovement(int position) {
+  x = position; 
+  std::cout << "Movement to x:" << position << std::endl; 
+  for (size_t i = 0; i < 5; i++){
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::cout << "."; 
+  }
+  std::cout << std::endl; 
+}
+
+void Node::serializeStruct(const NodeData& data, char* buffer) {
+  std::memcpy(buffer, &data, sizeof(NodeData));
 }
 
 int Node::serverSetup(){
@@ -161,25 +238,40 @@ int Node::serverSetup(){
 }
 
 int Node::greetParent(){
-  std::string message = "Hello from Node #";
+  NodeData helloMessage;  
+  helloMessage.nodeId = nodeId; 
+  helloMessage.action = "HELLO"; 
   std::ostringstream stream; 
-  stream << message << this->nodeId; 
-  message = stream.str(); 
 
-  if(send(clientSocket, message.c_str(), message.length(), 0) < 0) {
+  char serializedData[sizeof(NodeData)]; 
+  serializeStruct(helloMessage, serializedData); 
+  if(write(clientSocket, serializedData, sizeof(serializedData)) < 0) {
     std::cerr << "Failed to send data" << std::endl; 
     return -1; 
   }
 
-  std::cout << "Message sent to server: " << message << std::endl; 
+  std::cout << "Hello sent to server" << std::endl; 
+  return 0; 
+}
+
+int Node::returnOK() {
+  NodeData helloMessage;  
+  helloMessage.nodeId = nodeId; 
+  helloMessage.action = "OK"; 
+  std::ostringstream stream; 
+
+  char serializedData[sizeof(NodeData)]; 
+  serializeStruct(helloMessage, serializedData); 
+  if(write(clientSocket, serializedData, sizeof(serializedData)) < 0) {
+    std::cerr << "Failed to send data" << std::endl; 
+    return -1; 
+  }
+
+  std::cout << "Hello sent to server" << std::endl; 
   return 0; 
 }
 
 int Node::connectToParent(const std::string& serverAddress, const std::string& serverPort){
-  if(clientSocket != -1) {
-    close(clientSocket); 
-  }
-
   addrinfo hints{}; 
   hints.ai_family = AF_INET; 
   hints.ai_socktype = SOCK_STREAM; 
@@ -190,24 +282,37 @@ int Node::connectToParent(const std::string& serverAddress, const std::string& s
     return -1;
   }
 
-  clientSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol); 
-  if(clientSocket == -1){
+  int newClientSocket = socket(serverInfo->ai_family, serverInfo->ai_socktype, serverInfo->ai_protocol); 
+  if(newClientSocket == -1){
     std::cerr << "Failed to create client socket." << std::endl; 
     freeaddrinfo(serverInfo); 
     return -1; 
   }
 
-  int result = connect(clientSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); 
+  int result = connect(newClientSocket, serverInfo->ai_addr, serverInfo->ai_addrlen); 
   freeaddrinfo(serverInfo); 
 
   if(result != 0) {
     std::cerr << "Failed to connect to server" << std::endl; 
-    close(clientSocket); 
-    clientSocket = -1; 
+    close(newClientSocket); 
     return -1; 
   }
 
   std::cout << "Connected to server" << std::endl; 
+  
+  if(clientSocket != -1) {
+    close(clientSocket); 
+  }
+
+  clientSocket = newClientSocket; 
+
+  return 0; 
+}
+
+int Node::pushServerjob(const NodeData& socketData) {
+  std::unique_lock<std::mutex> lock(mutex);
+  serverJobs.push_front(socketData); 
+  cv.notify_one(); 
   return 0; 
 }
 
