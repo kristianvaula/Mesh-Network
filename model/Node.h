@@ -18,6 +18,9 @@ private:
     Priority priority;
 
 public:
+    Node* prev;
+    Node* next;
+
     Node();
     Node(int nodeId, int port, std::string ipAddress);
     Node(int nodeId, int port, std::string ipAddress, int xPosition, int yPosition, Priority priority);

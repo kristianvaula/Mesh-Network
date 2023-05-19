@@ -7,24 +7,28 @@
 
 #include <unordered_map>
 #include "/nettverksprog/mesh-network/model/Node.h"
+#include "DoubleLinkedList.cpp"
 
 class NodeList {
 private:
     std::unordered_map<int, Node> nodes;
+    DoubleLinkedList meshNetwork;
+    bool insertRight = false;
     int meshSize;
     int socketToMasterNode = -1;
 
 public:
     NodeList(int meshSize);
 
-    void addNode(const Node& node);
-    void addNode(const NodeData& nodeData);
-    Node getNode(const int nodeId);
-    void editNode(const Node& node);
+    void addNode(const Node&);
+    void addNode(const NodeData&);
+    Node getNode(const int);
+    void editNode(const Node&);
     int getSize() const;
     int getSocketToMasterNode() const;
-    Node addNodeToMesh(const NodeData& nodeData);
-    std::unordered_map<int, Node> getNodesWithPriority(Priority priority) const;
+    void setPriority(Node&);
+    Node addNodeToMesh(const NodeData&);
+    std::unordered_map<int, Node> getNodesWithPriority(Priority) const;
     
     /*
     * Controls if the mesh has reach it's maximal size

@@ -50,38 +50,45 @@ int NodeList::getSocketToMasterNode() const {
      return this->socketToMasterNode;
 }
 
+void NodeList::setPriority(Node& node) {
+    if (node.getXPosition() == 0) {
+        node.setPriority(Priority::HIGH);
+        std::cout << "Sets HIGH priority" << std::endl;
+    } else if (node.getXPosition() == 1 || node.getXPosition() == -1) {
+        node.setPriority(Priority::MEDIUM);
+        std::cout << "Sets MEDIUM priority" << std::endl;
+    } else {
+        node.setPriority(Priority::LOW);
+        std::cout << "Sets LOW priority" << std::endl;
+    }
+}
+
 Node NodeList::addNodeToMesh(const NodeData& nodeData) {//hardcoded if there is only 5 positions 
     int size = getSize();
     Priority priority;
     int location;
     Node node(nodeData);
 
-    if (size == 0) {
-        node.setPriority(Priority::HIGH);
-        node.setXPosition(0);
-        std::cout << "Priority high for nodeId: " << node.getNodeId() << std::endl;
-        std::cout << "Location: " << node.getXPosition() << std::endl; 
-    } else if (size == 1) {
-        node.setPriority(Priority::MEDIUM);
-        node.setXPosition(1);
-        std::cout << "Priority medium for nodeId: " << node.getNodeId() << std::endl;
-        std::cout << "Location: " << node.getXPosition() << std::endl;
-    } else if (size == 2) {
-        node.setPriority(Priority::MEDIUM);
-        node.setXPosition(-1);
-        std::cout << "Priority medium for nodeId: " << node.getNodeId() << std::endl;
-        std::cout << "Location: " << node.getXPosition() << std::endl;
-    } else if (size == 3) {
-        node.setPriority(Priority::LOW);
-        node.setXPosition(2);
-        std::cout << "Priority low for nodeId: " << node.getNodeId() << std::endl;
-        std::cout << "Location: " << node.getXPosition() << std::endl;
+    if(this->insertRight) {
+        this->meshNetwork.insertEnd(&node);
+        if(node.prev != nullptr) {
+            node.setXPosition(node.prev->getXPosition() + 1);;
+            std::cout << "Sets xPostion " << node.prev->getXPosition() + 1 << std::endl;
+        } 
+        this->insertRight = false;
     } else {
-        node.setPriority(Priority::LOW);
-        node.setXPosition(-2);
-        std::cout << "Priority low for nodeId: " << node.getNodeId() << std::endl;
-        std::cout << "Location: " << node.getXPosition() << std::endl;
+        this->meshNetwork.insertFront(&node);
+        if(node.next != nullptr) {
+            node.setXPosition(node.next->getXPosition() - 1);
+            std::cout << "Sets xPostion " << node.next->getXPosition() - 1 << std::endl;
+        } else {//master node
+            node.setXPosition(0);
+            std::cout << "Sets xPostion 0" << std::endl;
+        }
+        this->insertRight = true;
     }
+    this->setPriority(node);
+
     addNode(node);
     return node;
 }
