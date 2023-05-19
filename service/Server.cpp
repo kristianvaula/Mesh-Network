@@ -82,7 +82,6 @@ private:
     }
 
     void handleConnection(int new_socket) {
-        std::cout << "socket: " << new_socket << std::endl;
         int valread;
         char buffer[1024] = { 0 };
         std::string hello = "Hello from server";
@@ -119,6 +118,10 @@ private:
                         char action[256];
                         strcpy(action, "MOVETO_");
                         strcat(action, std::to_string(node.getXPosition()).c_str());
+
+                        if(node.getPriority() == Priority::HIGH) {                            
+                            nodeList.setSocketToMasterNode(new_socket);
+                        }
 
                         strcpy(nodeData.action, action);
                         send(new_socket, &nodeData, sizeof(nodeData), 0);

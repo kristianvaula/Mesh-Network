@@ -25,6 +25,7 @@ public:
     Node getNode(const int);
     void editNode(const Node&);
     int getSize() const;
+    void setSocketToMasterNode(const int);
     int getSocketToMasterNode() const;
     void setPriority(Node&);
     Node addNodeToMesh(const NodeData&);

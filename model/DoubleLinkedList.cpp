@@ -31,20 +31,4 @@ public:
             tail = node;
         }
     }
-
-    void displayForward() {
-        Node* current = head;
-        while (current != nullptr) {
-            current = current->next;
-        }
-        std::cout << std::endl;
-    }
-
-    void displayBackward() {
-        Node* current = tail;
-        while (current != nullptr) {
-            current = current->prev;
-        }
-        std::cout << std::endl;
-    }
 };

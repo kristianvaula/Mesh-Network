@@ -46,6 +46,10 @@ std::unordered_map<int, Node> NodeList::getNodesWithPriority(Priority priority) 
     return priorityNodes;
 }
 
+void NodeList::setSocketToMasterNode(const int socket) {
+    socketToMasterNode = socket;
+}
+
 int NodeList::getSocketToMasterNode() const {
      return this->socketToMasterNode;
 }
