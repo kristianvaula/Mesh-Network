@@ -13,7 +13,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <atomic>
-#include <../model/dto/SocketData.hpp>
+#include <../model/dto/SocketData.h>
 
 class Node {
   private: 
