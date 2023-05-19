@@ -1,3 +1,6 @@
+//
+// Created by HansMagne Asheim on 16/05/2023.
+//
 #include <netinet/in.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,95 +12,139 @@
 #include <thread>
 #include <unordered_map>
 
-#include "../model/dto/SocketData.cpp"
-#include "../model/enums/Actiontype.cpp"
-#include "../model/DroneList.cpp"
+#include "/nettverksprog/mesh-network/model/enums/ActionType.h"
+#include "/nettverksprog/mesh-network/model/NodeList.h"
 
-#define PORT 1026
+#define PORT 1032
+
+class Server {
+private:
+    std::unordered_map<std::string, ActionType> actionTypes;
+    std::vector<std::thread> threads;
+    NodeList nodeList;
+    int server_fd;
+    bool run;
+
+public:
+    Server()
+        : actionTypes(),
+          threads(),
+          nodeList(),
+          server_fd(-1),
+          run(true) {}
+
+    void start() {
+        createSocket();
+        bindSocket();
+        listenForConnections();
+        handleConnections();
+        cleanup();
+    }
+
+    void stop() {
+        run = false;
+        shutdown(server_fd, SHUT_RDWR);
+    }
+
+private:
+    void createSocket() {
+        // Creating socket file descriptor
+        if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+            perror("socket failed");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    void bindSocket() {
+        struct sockaddr_in address;
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = INADDR_ANY;
+        address.sin_port = htons(PORT);
+
+        // Forcefully attaching socket to the port
+        if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
+            perror("bind failed");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    void listenForConnections() {
+        if (listen(server_fd, 3) < 0) {
+            perror("listen");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    void handleConnection(int new_socket) {
+        int valread;
+        char buffer[1024] = { 0 };
+        std::string hello = "Hello from server";
+
+        try {
+            send(new_socket, hello.c_str(), hello.length(), 0);
+            valread = read(new_socket, buffer, sizeof(buffer));
+            printf("%s\n", buffer);
+
+            NodeData nodeData = {0};
+            long client_data = recv(new_socket, &nodeData, sizeof(nodeData), 0);
+            std::cout << "droneId: " << nodeData.nodeId << std::endl
+            << "port: " << nodeData.port << std::endl
+            << "action: " << nodeData.action << std::endl;
+            if (actionTypes[nodeData.action] == ActionType::HELLO) {
+                nodeList.addNode(nodeData);
+                std::cout << "isNodeInMesh1: " << nodeList.isNodeInMesh() << std::endl;
+                if (!nodeList.isNodeInMesh()) {
+                    Node nodeListItem = nodeList.getNode(nodeData.nodeId);
+                    nodeListItem.setPriority(Priority::HIGH);//has (0,0) as inital position
+                    nodeList.editNode(nodeListItem);
+                    std::cout << "isNodeInMesh1: " << nodeList.isNodeInMesh() << std::endl;
+                    memset(buffer, 0, sizeof(buffer));//clear buffer
+                    strcpy(buffer, "MOVETO_");
+                    strcat(buffer, std::to_string(nodeListItem.getXPosition()).c_str());
+                    send(new_socket, buffer, sizeof(buffer), 0);
+                }
+            }                
+            close(new_socket);
+        } catch (...) {
+            close(new_socket);
+        }
+    }
+
+    void handleConnections() {
+        struct sockaddr_in address;
+        int addrlen = sizeof(address);
+        actionTypes = {
+            { "REMOVE_NODE", ActionType::REMOVE_NODE },
+            { "MOVETO", ActionType::MOVETO },
+            { "HELLO", ActionType::HELLO }
+        };
+
+
+        while (run) {
+            int new_socket;
+            if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
+                perror("new connection failed");
+                exit(EXIT_FAILURE);
+            }
+
+            threads.emplace_back([&] {
+                handleConnection(new_socket);
+            });
+
+        }
+    }
+
+    void cleanup() {
+        for (auto& thread : threads) {
+            thread.join();
+        }
+    }
+};
 
 int main(int argc, char const* argv[])
 {
-    std::unordered_map<std::string, ActionType> actionTypes = {
-            { "Low battery", ActionType::LOW_BATTERY },
-            { "Add drone", ActionType::ADD_DRONE }
-    };
+    Server server;
+    server.start();
 
-    DroneList droneList;
-
-    int server_fd, new_socket;
-    struct sockaddr_in address;
-    int opt = 1;
-    int addrlen = sizeof(address);
-    std::vector<std::thread> threads;
-
-
-    // Creating socket file descriptor
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("socket failed");
-        exit(EXIT_FAILURE);
-    }
-
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
-
-    // Forcefully attaching socket to the port 8080
-    if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
-        perror("bind failed");
-        exit(EXIT_FAILURE);
-    }
-
-    if (listen(server_fd, 3) < 0) {
-        perror("listen");
-        exit(EXIT_FAILURE);
-    }
-
-    bool run = true;
-    while (run) {
-        if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
-            perror("new connection failed");
-            exit(EXIT_FAILURE);
-        }
-
-        threads.emplace_back([&new_socket, &droneList, &actionTypes] {
-            int valread;
-            char buffer[1024] = { 0 };
-            std::string hello = "Hello from server";
-
-
-            try {
-                send(new_socket, hello.c_str(), hello.length(), 0);
-                valread = read(new_socket, buffer, 1024);
-                printf("%s\n", buffer);
-
-                DroneData droneData = {0};
-                long client_data = recv(new_socket, &droneData, sizeof(droneData), 0);
-                std::cout << "droneId: " << droneData.droneId << std::endl << "port: " << droneData.port << std::endl << "action: " << droneData.action << std::endl;
-                if (actionTypes[droneData.action] == ActionType::ADD_DRONE) {
-                    droneList.addDrone(droneData);
-                }
-
-                std::string client_ans = "The data is received from the server";
-                send(new_socket, client_ans.c_str(), client_ans.length(), 0);
-
-                close(new_socket);
-            } catch (...) {
-                close(new_socket);
-            }
-        });
-
-        char x;
-        std::cout << "Do you want the server to terminate (Y/N)" << std::endl;
-        std::cin >> x;
-        if (x == 'Y') {
-            run = false;
-            shutdown(server_fd, SHUT_RDWR);
-        }
-    }
-
-    for (auto& thread : threads) {
-        thread.join();
-    }
     return 0;
 }
-
