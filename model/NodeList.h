@@ -12,6 +12,7 @@ class NodeList {
 private:
     std::unordered_map<int, Node> nodes;
     int meshSize;
+    int socketToMasterNode = -1;
 
 public:
     NodeList(int meshSize);

@@ -93,9 +93,10 @@ private:
             long client_data = recv(new_socket, &nodeData, sizeof(nodeData), 0);
             std::cout << "droneId: " << nodeData.nodeId << std::endl
             << "port: " << nodeData.port << std::endl
+            << "ipAddress: " << nodeData.ipAddress << std::endl
             << "action: " << nodeData.action << std::endl;
             if (actionTypes[nodeData.action] == ActionType::HELLO) {
-                Node node(nodeData.nodeId, new_socket);
+                Node node(nodeData);
                 std::cout << "size: " << nodeList.getSize() << std::endl;
                 {
                      std::unique_lock<std::mutex> lock(this->nodeList_mutex);

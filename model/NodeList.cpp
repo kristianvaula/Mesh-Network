@@ -47,15 +47,7 @@ std::unordered_map<int, Node> NodeList::getNodesWithPriority(Priority priority) 
 }
 
 int NodeList::getSocketToMasterNode() const {
-     if (!nodes.empty()) {
-        auto priorityNodes = getNodesWithPriority(Priority::HIGH);
-        if (!priorityNodes.empty()) {
-            const Node& node = priorityNodes.begin()->second;
-            return node.getSocket();
-        }
-    }
-    
-    return -1;
+     return this->socketToMasterNode;
 }
 
 Node NodeList::addNodeToMesh(const NodeData& nodeData) {//hardcoded if there is only 5 positions 
