@@ -15,6 +15,7 @@
 
 #include "/nettverksprog/mesh-network/model/enums/ActionType.h"
 #include "/nettverksprog/mesh-network/model/NodeList.h"
+#include "/nettverksprog/mesh-network/service/IpUtils.h"
 
 #define PORT 1033
 
@@ -26,14 +27,16 @@ private:
     int server_fd;
     bool run;
     std::mutex nodeList_mutex;
+    IpUtils ipUtils;
 
 public:
     Server()
         : actionTypes(),
           threads(),
-          nodeList(5),//sets the mesh network size to 5
+          nodeList(3),//sets the mesh network size to 5
           server_fd(-1),
           nodeList_mutex(),
+          ipUtils(),
           run(true) {};
 
     void start() {
@@ -97,23 +100,32 @@ private:
             << "action: " << nodeData.action << std::endl;
             if (actionTypes[nodeData.action] == ActionType::HELLO) {
                 Node node(nodeData);
-                std::cout << "size: " << nodeList.getSize() << std::endl;
-                {
-                     std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                    std::cout << "isMeshFull1: " << nodeList.isMeshFull() << std::endl;
+                {//aquire lock
+                    std::unique_lock<std::mutex> lock(this->nodeList_mutex);
                     if (!nodeList.isMeshFull()) {
-                        //TODO: aquire lock
                         Node node = nodeList.addNodeToMesh(nodeData);
-                        //TODO: release lock
-                        std::cout << "isMeshFull2: " << nodeList.isMeshFull() << std::endl;
-                        memset(buffer, 0, sizeof(buffer));//clear buffer
-                        strcpy(buffer, "MOVETO_");
-                        strcat(buffer, std::to_string(node.getXPosition()).c_str());
-                        send(new_socket, buffer, sizeof(buffer), 0);
+                        NodeData nodeData = {0};
+                        nodeData.nodeId = node.getNodeId();
+                        Node* connectedInnerNode = nodeList.getConnectedInnerNode(node);
+                        if (connectedInnerNode != nullptr) {
+                            nodeData.port = connectedInnerNode->getPort();
+                            strcpy(nodeData.ipAddress, connectedInnerNode->getIpAddress().c_str());
+                        } else { //the node is master node
+                            nodeData.port = PORT;
+                            char ipAddress[256];
+                            ipUtils.getIPAddress(ipAddress, sizeof(ipAddress));
+                            strcpy(nodeData.ipAddress, ipAddress);
+                        }
+                        char action[256];
+                        strcpy(action, "MOVETO_");
+                        strcat(action, std::to_string(node.getXPosition()).c_str());
+
+                        strcpy(nodeData.action, action);
+                        send(new_socket, &nodeData, sizeof(nodeData), 0);
                     } else {
                         nodeList.addNode(node);
                     }
-                }
+                }//release lock
             }                
             close(new_socket);
         } catch (...) {

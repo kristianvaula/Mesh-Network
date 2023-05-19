@@ -63,16 +63,15 @@ void NodeList::setPriority(Node& node) {
     }
 }
 
-Node NodeList::addNodeToMesh(const NodeData& nodeData) {//hardcoded if there is only 5 positions 
-    int size = getSize();
-    Priority priority;
-    int location;
+Node NodeList::addNodeToMesh(const NodeData& nodeData) {
     Node node(nodeData);
 
     if(this->insertRight) {
         this->meshNetwork.insertEnd(&node);
         if(node.prev != nullptr) {
-            node.setXPosition(node.prev->getXPosition() + 1);;
+            node.setXPosition(node.prev->getXPosition() + 1);
+            std::cout << "Previous nodeid: " << node.prev->getNodeId() << std::endl
+            << "My nodeId " << node.getNodeId() << std::endl;;
             std::cout << "Sets xPostion " << node.prev->getXPosition() + 1 << std::endl;
         } 
         this->insertRight = false;
@@ -80,6 +79,8 @@ Node NodeList::addNodeToMesh(const NodeData& nodeData) {//hardcoded if there is 
         this->meshNetwork.insertFront(&node);
         if(node.next != nullptr) {
             node.setXPosition(node.next->getXPosition() - 1);
+            std::cout << "Next nodeid: " << node.next->getNodeId() << std::endl
+            << "My nodeId " << node.getNodeId() << std::endl;
             std::cout << "Sets xPostion " << node.next->getXPosition() - 1 << std::endl;
         } else {//master node
             node.setXPosition(0);
@@ -91,6 +92,15 @@ Node NodeList::addNodeToMesh(const NodeData& nodeData) {//hardcoded if there is 
 
     addNode(node);
     return node;
+}
+
+Node* NodeList::getConnectedInnerNode(const Node& node) {
+    if(node.getXPosition() == 0) {
+        return nullptr;
+    } else if (node.getXPosition() > 0) {
+        return node.prev;
+    }
+    return node.next;
 }
 
 bool NodeList::isMeshFull() const {

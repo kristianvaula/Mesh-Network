@@ -29,6 +29,12 @@ public:
     void setPriority(Node&);
     Node addNodeToMesh(const NodeData&);
     std::unordered_map<int, Node> getNodesWithPriority(Priority) const;
+
+    /*
+    * Getter for the connected inner node
+    * If the node is master node is null returned, if not is the connected inner node returned
+    */
+    Node* getConnectedInnerNode(const Node&);
     
     /*
     * Controls if the mesh has reach it's maximal size
