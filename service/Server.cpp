@@ -11,6 +11,7 @@
 #include <iostream>
 #include <thread>
 #include <unordered_map>
+#include <mutex>
 
 #include "/nettverksprog/mesh-network/model/enums/ActionType.h"
 #include "/nettverksprog/mesh-network/model/NodeList.h"
@@ -24,6 +25,7 @@ private:
     NodeList nodeList;
     int server_fd;
     bool run;
+    std::mutex nodeList_mutex;
 
 public:
     Server()
@@ -31,7 +33,8 @@ public:
           threads(),
           nodeList(5),//sets the mesh network size to 5
           server_fd(-1),
-          run(true) {}
+          nodeList_mutex(),
+          run(true) {};
 
     void start() {
         createSocket();
@@ -94,18 +97,21 @@ private:
             if (actionTypes[nodeData.action] == ActionType::HELLO) {
                 Node node(nodeData.nodeId, new_socket);
                 std::cout << "size: " << nodeList.getSize() << std::endl;
-                std::cout << "isMeshFull1: " << nodeList.isMeshFull() << std::endl;
-                if (!nodeList.isMeshFull()) {
-                    //TODO: aquire lock
-                    Node node = nodeList.addNodeToMesh(nodeData);
-                    //TODO: release lock
-                    std::cout << "isMeshFull2: " << nodeList.isMeshFull() << std::endl;
-                    memset(buffer, 0, sizeof(buffer));//clear buffer
-                    strcpy(buffer, "MOVETO_");
-                    strcat(buffer, std::to_string(node.getXPosition()).c_str());
-                    send(new_socket, buffer, sizeof(buffer), 0);
-                } else {
-                    nodeList.addNode(node);
+                {
+                     std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                    std::cout << "isMeshFull1: " << nodeList.isMeshFull() << std::endl;
+                    if (!nodeList.isMeshFull()) {
+                        //TODO: aquire lock
+                        Node node = nodeList.addNodeToMesh(nodeData);
+                        //TODO: release lock
+                        std::cout << "isMeshFull2: " << nodeList.isMeshFull() << std::endl;
+                        memset(buffer, 0, sizeof(buffer));//clear buffer
+                        strcpy(buffer, "MOVETO_");
+                        strcat(buffer, std::to_string(node.getXPosition()).c_str());
+                        send(new_socket, buffer, sizeof(buffer), 0);
+                    } else {
+                        nodeList.addNode(node);
+                    }
                 }
             }                
             close(new_socket);
