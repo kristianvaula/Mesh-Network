@@ -5,7 +5,9 @@
 
 #include "/nettverksprog/mesh-network/model/NodeList.h"
 
-NodeList::NodeList() {}
+NodeList::NodeList(int meshSize) 
+        : meshSize(meshSize) {
+}
 
 void NodeList::addNode(const Node& node) {
     nodes.insert(std::make_pair(node.getNodeId(), node));
@@ -44,6 +46,54 @@ std::unordered_map<int, Node> NodeList::getNodesWithPriority(Priority priority) 
     return priorityNodes;
 }
 
-bool NodeList::isNodeInMesh() const {
-    return nodes.size() - getNodesWithPriority(Priority::NONE).size() > 0;
+int NodeList::getSocketToMasterNode() const {
+     if (!nodes.empty()) {
+        auto priorityNodes = getNodesWithPriority(Priority::HIGH);
+        if (!priorityNodes.empty()) {
+            const Node& node = priorityNodes.begin()->second;
+            return node.getSocket();
+        }
+    }
+    
+    return -1;
+}
+
+Node NodeList::addNodeToMesh(const NodeData& nodeData) {//hardcoded if there is only 5 positions 
+    int size = getSize();
+    Priority priority;
+    int location;
+    Node node(nodeData);
+
+    if (size == 0) {
+        node.setPriority(Priority::HIGH);
+        node.setXPosition(0);
+        std::cout << "Priority high for nodeId: " << node.getNodeId() << std::endl;
+        std::cout << "Location: " << node.getXPosition() << std::endl; 
+    } else if (size == 1) {
+        node.setPriority(Priority::MEDIUM);
+        node.setXPosition(1);
+        std::cout << "Priority medium for nodeId: " << node.getNodeId() << std::endl;
+        std::cout << "Location: " << node.getXPosition() << std::endl;
+    } else if (size == 2) {
+        node.setPriority(Priority::MEDIUM);
+        node.setXPosition(-1);
+        std::cout << "Priority medium for nodeId: " << node.getNodeId() << std::endl;
+        std::cout << "Location: " << node.getXPosition() << std::endl;
+    } else if (size == 3) {
+        node.setPriority(Priority::LOW);
+        node.setXPosition(2);
+        std::cout << "Priority low for nodeId: " << node.getNodeId() << std::endl;
+        std::cout << "Location: " << node.getXPosition() << std::endl;
+    } else {
+        node.setPriority(Priority::LOW);
+        node.setXPosition(-2);
+        std::cout << "Priority low for nodeId: " << node.getNodeId() << std::endl;
+        std::cout << "Location: " << node.getXPosition() << std::endl;
+    }
+    addNode(node);
+    return node;
+}
+
+bool NodeList::isMeshFull() const {
+    return nodes.size() - getNodesWithPriority(Priority::NONE).size() == meshSize;
 }

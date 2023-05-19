@@ -11,21 +11,24 @@
 class NodeList {
 private:
     std::unordered_map<int, Node> nodes;
+    int meshSize;
 
 public:
-    NodeList();
+    NodeList(int meshSize);
 
     void addNode(const Node& node);
     void addNode(const NodeData& nodeData);
     Node getNode(const int nodeId);
     void editNode(const Node& node);
     int getSize() const;
+    int getSocketToMasterNode() const;
+    Node addNodeToMesh(const NodeData& nodeData);
     std::unordered_map<int, Node> getNodesWithPriority(Priority priority) const;
     
     /*
-    * Controls is there is one or more nodes in the mesh
-    * Returnes true if there is one or more nodes in the mesh, otherwise false
+    * Controls if the mesh has reach it's maximal size
+    * Returnes true if the mesh has reaced it's size, otherwise false
     */
-    bool isNodeInMesh() const;
+    bool isMeshFull() const;
 };
 #endif //MESH_NETWORK_NODELIST_H

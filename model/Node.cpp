@@ -6,14 +6,18 @@ Node::Node(int nodeId, int port, int ipAddress)
         : nodeId(nodeId), port(port), ipAddress(ipAddress), xPosition(0), yPosition(0), priority(Priority::NONE) {
 }
 
-Node::Node(int nodeId, int port, int ipAddress, int xPosition, int yPosition, Priority priority)
+Node::Node(int nodeId, int socket)
+        : nodeId(nodeId), port(0), ipAddress(0), xPosition(0), yPosition(0), socket(socket), priority(Priority::NONE) {
+}
+
+Node::Node(int nodeId, int port, int ipAddress, int xPosition, int yPosition, int socket, Priority priority)
         : nodeId(nodeId), port(port), ipAddress(ipAddress), xPosition(xPosition), yPosition(yPosition),
-          priority(priority) {
+        socket(socket), priority(priority) {
 }
 
 Node::Node(const Node& other)
         : nodeId(other.nodeId), port(other.port), ipAddress(other.ipAddress), xPosition(other.xPosition),
-          yPosition(other.yPosition), priority(other.priority) {
+          yPosition(other.yPosition), socket(other.socket), priority(other.priority) {
 }
 
 Node::Node(const NodeData& nodeData) 
@@ -46,6 +50,10 @@ int Node::getYPosition() const {
 
 void Node::setYPosition(int y) {
     yPosition = y;
+}
+
+int Node::getSocket() const {
+    return socket;
 }
 
 Priority Node::getPriority() const {
