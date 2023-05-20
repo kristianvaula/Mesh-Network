@@ -29,6 +29,7 @@ public:
     int getSocketToMasterNode() const;
     void setPriority(Node&);
     Node addNodeToMesh(Node&);
+    bool isNodeInMesh(const int);
     std::unordered_map<int, Node> getNodesWithPriority(Priority) const;
 
     /*

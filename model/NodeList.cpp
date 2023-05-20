@@ -72,7 +72,6 @@ void NodeList::setPriority(Node& node) {
 }
 
 Node NodeList::addNodeToMesh(Node& node) {
-
     if(this->insertRight) {
         this->meshNetwork.insertEnd(&node);
         if(node.prev != nullptr) {
@@ -99,6 +98,15 @@ Node NodeList::addNodeToMesh(Node& node) {
 
     addNode(node);
     return node;
+}
+
+bool NodeList::isNodeInMesh(const int nodeId) {
+    auto iterator = nodes.find(nodeId);
+    if (iterator != nodes.end()) {
+        Node& nodeInNodeList = iterator->second;
+        return nodeInNodeList.getPriority() != Priority::NONE;
+    }
+    return false;
 }
 
 Node* NodeList::getConnectedInnerNode(const Node& node) {
