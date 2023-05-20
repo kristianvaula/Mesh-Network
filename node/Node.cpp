@@ -29,7 +29,7 @@ class Node {
     void ClientThreadFunc(const std::string& serverPort);
 };
 
-Node::Node(int id, int port) : id_(id), port_(port), clientWorker_() {
+Node::Node(int id, int port) : id_(id), port_(port), clientWorker_(), clientRunning_(false) {
 }
 
 Node::~Node() {
