@@ -99,6 +99,47 @@ Node NodeList::addNodeToMesh(Node& node) {
     addNode(node);
     return node;
 }
+//new method
+void NodeList::resetNode(Node& node) {
+    node.setPriority(Priority::NONE);
+    node.setXPosition(0);
+    node.prev = nullptr;
+    node.next = nullptr;
+} 
+
+//new method
+void NodeList::toString(Node& node) {
+    std::cout << "nodeId: " << node.getNodeId() << ", xPosition: " << node.getXPosition() << std::endl;
+    if (node.prev) {
+        std::cout  << "prev nodeId: " << node.prev->getNodeId() << std::endl;
+    } 
+    if (node.next) {
+        std::cout  << "next nodeId: " << node.next->getNodeId() << std::endl;
+    }
+}
+
+//new method
+void NodeList::copyNodeInformation(Node& node, Node& replacementNode) {
+    toString(node);
+    toString(replacementNode);
+    meshNetwork.replaceNode(&node, &replacementNode);
+    replacementNode.setPriority(node.getPriority());
+    replacementNode.setXPosition(node.getXPosition());
+    toString(node);
+    toString(replacementNode);
+}
+
+//new method
+void NodeList::replaceNode(const int nodeId, const int replacementNodeId) {
+    std::cout << "Replcaing nodeId: " << nodeId << " with replacementNodeId " << replacementNodeId << std:: endl;
+    Node node = nodes[nodeId];
+    std::cout  << "REPLACE NODE prev nodeId: " << node.prev->getNodeId() << std::endl;
+    std::cout  << "REPLACE NODE next nodeId: " << node.next->getNodeId() << std::endl;
+    Node replacementNode = nodes[replacementNodeId];
+
+    copyNodeInformation(node, replacementNode);
+    resetNode(node);
+}
 
 bool NodeList::isNodeInMesh(const int nodeId) {
     auto iterator = nodes.find(nodeId);

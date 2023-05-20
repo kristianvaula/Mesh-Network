@@ -5,6 +5,7 @@ enum class ActionType {
     REMOVE_NODE,
     MOVETO,
     HELLO,
+    REPLACE,//new constant
 };
 
 #endif //MESH_NETWORK_ACTION_TYPE_H

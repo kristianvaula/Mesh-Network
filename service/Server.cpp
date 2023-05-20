@@ -17,12 +17,14 @@
 #include "/nettverksprog/mesh-network/model/NodeList.h"
 #include "/nettverksprog/mesh-network/service/IpUtils.h"
 
-#define PORT 1033
+#define PORT 1065
 
 /*
     TODO:
     - Sjekke close_socket
     - sjekke joining
+    - sjekke inifinte prining når en client avsluttes
+    - implement method to close connection with a node. The close will happen on request from the node
 */
 class Server {
 private:
@@ -39,7 +41,7 @@ public:
     Server()
         : actionTypes(),
           threads(),
-          nodeList(3),//sets the mesh network size to 5
+          nodeList(5),//sets the mesh network size to 5
           server_fd(-1),
           nodeList_mutex(),
           ipUtils(),
@@ -100,7 +102,6 @@ private:
         char x;
 
         while (serverInput) {
-
             displayMenu();
             std::cin >> x;
             if (x == 'q') {
@@ -120,6 +121,7 @@ private:
         NodeData nodeData = {0};
         nodeData.nodeId = node.getNodeId();
         Node* connectedInnerNode = nodeList.getConnectedInnerNode(node);
+
         if (connectedInnerNode != nullptr) {
             nodeData.port = connectedInnerNode->getPort();
             strcpy(nodeData.ipAddress, connectedInnerNode->getIpAddress().c_str());
@@ -150,9 +152,7 @@ private:
         valread = read(new_socket, buffer, sizeof(buffer));
         printf("%s\n", buffer);
 
-        std::cout << "new_socket: " << new_socket << std::endl;
-
-        try {
+        while (run) {
             NodeData nodeData = {0};
             long client_data = recv(new_socket, &nodeData, sizeof(nodeData), 0);
             std::cout << "droneId: " << nodeData.nodeId << std::endl
@@ -173,10 +173,15 @@ private:
                     NodeData formatedNodeData = formatNodeToSend(node, new_socket);
                     send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
                 }
+            } else if (actionTypes[std::string(nodeData.action).substr(0, 7)] == ActionType::REPLACE) {
+                std::string action = std::string(nodeData.action);
+                int replacementNodeId = std::stoi(action.substr(8));
+                {//aquire lock
+                    std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                    nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
+                }//release lock
             }
-        } catch (...) {
-            close(new_socket);
-        }             
+        }          
     }
 
     void removeNode(int nodeId) {
@@ -205,7 +210,8 @@ private:
         actionTypes = {
             { "REMOVE_NODE", ActionType::REMOVE_NODE },
             { "MOVETO", ActionType::MOVETO },
-            { "HELLO", ActionType::HELLO }
+            { "HELLO", ActionType::HELLO },
+            { "REPLACE", ActionType::REPLACE }
         };
 
         while (run) {
