@@ -1,49 +1,29 @@
-#include <iostream>
-#include <string>
-#include <cstring> 
-#include <vector>
-#include <thread>
-#include <mutex>
-#include <atomic>
-#include <chrono>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
+#pragma once
+
+#include "Worker.hpp"
 
 typedef std::uint16_t porttype; 
 
-class ClientWorker {
+class ClientWorker : public Worker{
   public: 
     ClientWorker(); 
     ~ClientWorker(); 
 
-    void Run(const std::string& serverPort); 
-    void Stop(); 
-    void SetServerport(const std::string& serverPort); 
-  private: 
-    int socket_; 
-    porttype serverPort_; 
-    std::mutex mutex_; 
-    std::atomic<bool> running_; 
+    void RunClient(const std::string& serverPort); 
 
+  private: 
     int Connect(); 
 };
 
-ClientWorker::ClientWorker() : mutex_(), running_(true), socket_(-1){
-}
+ClientWorker::ClientWorker() : Worker(){}
 
-ClientWorker::~ClientWorker() {
-  Stop();
-}
+ClientWorker::~ClientWorker() {}
 
-void ClientWorker::Run(const std::string& serverPort) {
-  std::cout << "[ClientWorker] Running client" << std::endl; 
-
+void ClientWorker::RunClient(const std::string& serverPort) {
   running_.store(true); 
 
   SetServerport(serverPort);  
-  if (Connect() == -1) {
+  if (Connect() != 0) {
     return; 
   }
 
@@ -76,25 +56,7 @@ void ClientWorker::Run(const std::string& serverPort) {
     
   }
 
-  std::cout << "[ClientWorker] Stopping client" << std::endl; 
-}
-
-void ClientWorker::Stop() {
-  running_.store(false); 
-}
-
-void ClientWorker::SetServerport(const std::string& serverPort) {
-  try {
-    porttype port = static_cast<porttype>(std::stoi(serverPort)); 
-    {
-      std::unique_lock<std::mutex> lock(mutex_);
-      this->serverPort_ = port; 
-    }
-  } catch (const std::invalid_argument& e) {
-    std::cerr << "[ClientWorker] Invalid port value: " << serverPort << std::endl; 
-  } catch (const std::out_of_range& e) {
-    std::cerr << "[ClientWorker] Invalid port value: " << serverPort << std::endl; 
-  }
+  close(socket_);  
 }
 
 int ClientWorker::Connect() {
