@@ -20,15 +20,15 @@ private:
 public:
     NodeList(int meshSize);
 
-    void addNode(const Node&);
-    void addNode(const NodeData&);
+    Node addNode(const Node&);
+    Node addNode(const NodeData&);
     Node getNode(const int);
     void editNode(const Node&);
     int getSize() const;
     void setSocketToMasterNode(const int);
     int getSocketToMasterNode() const;
     void setPriority(Node&);
-    Node addNodeToMesh(const NodeData&);
+    Node addNodeToMesh(Node&);
     std::unordered_map<int, Node> getNodesWithPriority(Priority) const;
 
     /*

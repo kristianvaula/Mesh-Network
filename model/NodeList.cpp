@@ -9,13 +9,17 @@ NodeList::NodeList(int meshSize)
         : meshSize(meshSize) {
 }
 
-void NodeList::addNode(const Node& node) {
-    nodes.insert(std::make_pair(node.getNodeId(), node));
+Node NodeList::addNode(const Node& node) {
+    auto insertionResult = nodes.insert(std::make_pair(node.getNodeId(), node));
+    if (insertionResult.second) {
+        return insertionResult.first->second;
+    }
+    return Node();
 }
 
-void NodeList::addNode(const NodeData& nodeData) {
+Node NodeList::addNode(const NodeData& nodeData) {
     Node node(nodeData);
-    nodes.insert(std::make_pair(node.getNodeId(), node));
+    return addNode(node);
 }
 
 Node NodeList::getNode(const int nodeId) {
@@ -67,8 +71,7 @@ void NodeList::setPriority(Node& node) {
     }
 }
 
-Node NodeList::addNodeToMesh(const NodeData& nodeData) {
-    Node node(nodeData);
+Node NodeList::addNodeToMesh(Node& node) {
 
     if(this->insertRight) {
         this->meshNetwork.insertEnd(&node);

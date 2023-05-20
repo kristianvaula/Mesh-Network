@@ -17,7 +17,7 @@
 #include "/nettverksprog/mesh-network/model/NodeList.h"
 #include "/nettverksprog/mesh-network/service/IpUtils.h"
 
-#define PORT 1033
+#define PORT 1034
 
 class Server {
 private:
@@ -81,6 +81,31 @@ private:
         }
     }
 
+    NodeData formatNodeToSend(Node& node, int new_socket) {
+        NodeData nodeData = {0};
+        nodeData.nodeId = node.getNodeId();
+        Node* connectedInnerNode = nodeList.getConnectedInnerNode(node);
+        if (connectedInnerNode != nullptr) {
+            nodeData.port = connectedInnerNode->getPort();
+            strcpy(nodeData.ipAddress, connectedInnerNode->getIpAddress().c_str());
+        } else { //the node is master node
+            nodeData.port = PORT;
+            char ipAddress[256];
+            ipUtils.getIPAddress(ipAddress, sizeof(ipAddress));
+            strcpy(nodeData.ipAddress, ipAddress);
+        }
+        char action[256];
+        strcpy(action, "MOVETO_");
+        strcat(action, std::to_string(node.getXPosition()).c_str());
+        if(node.getPriority() == Priority::HIGH) {                            
+            nodeList.setSocketToMasterNode(new_socket);
+        }
+
+        strcpy(nodeData.action, action);
+        return nodeData;
+    }
+    
+
     void handleConnection(int new_socket) {
         int valread;
         char buffer[1024] = { 0 };
@@ -102,33 +127,15 @@ private:
                 {//aquire lock
                     std::unique_lock<std::mutex> lock(this->nodeList_mutex);
                     if (!nodeList.isMeshFull()) {
-                        Node node = nodeList.addNodeToMesh(nodeData);
-                        NodeData nodeData = {0};
-                        nodeData.nodeId = node.getNodeId();
-                        Node* connectedInnerNode = nodeList.getConnectedInnerNode(node);
-                        if (connectedInnerNode != nullptr) {
-                            nodeData.port = connectedInnerNode->getPort();
-                            strcpy(nodeData.ipAddress, connectedInnerNode->getIpAddress().c_str());
-                        } else { //the node is master node
-                            nodeData.port = PORT;
-                            char ipAddress[256];
-                            ipUtils.getIPAddress(ipAddress, sizeof(ipAddress));
-                            strcpy(nodeData.ipAddress, ipAddress);
-                        }
-                        char action[256];
-                        strcpy(action, "MOVETO_");
-                        strcat(action, std::to_string(node.getXPosition()).c_str());
-
-                        if(node.getPriority() == Priority::HIGH) {                            
-                            nodeList.setSocketToMasterNode(new_socket);
-                        }
-
-                        strcpy(nodeData.action, action);
-                        send(new_socket, &nodeData, sizeof(nodeData), 0);
+                        nodeList.addNodeToMesh(node);
                     } else {
                         nodeList.addNode(node);
                     }
                 }//release lock
+                if (node.getPriority() != Priority::NONE) {
+                    NodeData formatedNodeData = formatNodeToSend(node, new_socket);
+                    send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
+                }
             }                
             close(new_socket);
         } catch (...) {
