@@ -17,7 +17,7 @@
 #include "../model/NodeList.hpp"
 #include "IpUtils.hpp"
 
-#define PORT 1082
+#define PORT 1083
 
 /*
     TODO:
@@ -159,7 +159,7 @@ private:
             << "port: " << nodeData.port << std::endl
             << "ipAddress: " << nodeData.ipAddress << std::endl
             << "action: " << nodeData.action << std::endl;
-            if (actionTypes[nodeData.action] == ActionType::HELLO) {
+            if (actionFromString(nodeData.action) == ActionType::HELLO) {
                 Node node(nodeData);
                 {//aquire lock
                     std::unique_lock<std::mutex> lock(this->nodeList_mutex);
@@ -174,7 +174,7 @@ private:
                     NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
                     send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
                 }
-            } else if (actionTypes[std::string(nodeData.action).substr(0, 7)] == ActionType::REPLACE) {
+            } else if (actionFromString(nodeData.action) == ActionType::REPLACE) {
                 std::string action = std::string(nodeData.action);
                 int replacementNodeId = std::stoi(action.substr(8));
                 {//aquire lock
@@ -208,12 +208,6 @@ private:
     void handleConnections() {
         struct sockaddr_in address;
         int addrlen = sizeof(address);
-        actionTypes = {
-            { "REMOVE_NODE", ActionType::REMOVE_NODE },
-            { "MOVETO", ActionType::MOVETO },
-            { "HELLO", ActionType::HELLO },
-            { "REPLACE", ActionType::REPLACE }
-        };
 
         while (run) {
             int new_socket;
