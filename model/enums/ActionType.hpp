@@ -1,5 +1,5 @@
-#ifndef MESH_NETWORK_ACTION_TYPE_H
-#define MESH_NETWORK_ACTION_TYPE_H
+#ifndef MESH_NETWORK_ACTION_TYPE_HPP
+#define MESH_NETWORK_ACTION_TYPE_HPP
 
 #include <map>
 #include <string>
@@ -18,4 +18,4 @@ extern std::map<ActionType, std::string> actionTypeToString;
 ActionType actionFromString(const std::string& str);
 std::string actionToString(const ActionType& action);
 
-#endif // MESH_NETWORK_ACTION_TYPE_H
+#endif // MESH_NETWORK_ACTION_TYPE_HPP

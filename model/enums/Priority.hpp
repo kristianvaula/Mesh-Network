@@ -2,8 +2,8 @@
 // Created by HansMagne Asheim on 16/05/2023.
 //
 
-#ifndef MESH_NETWORK_PRIORITY_H
-#define MESH_NETWORK_PRIORITY_H
+#ifndef MESH_NETWORK_PRIORITY_HPP
+#define MESH_NETWORK_PRIORITY_HPP
 
 enum class Priority {
     HIGH,
@@ -12,4 +12,4 @@ enum class Priority {
     NONE
 };
 
-#endif //MESH_NETWORK_PRIORITY_H
+#endif //MESH_NETWORK_PRIORITY_HPP

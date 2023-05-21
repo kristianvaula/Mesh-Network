@@ -13,11 +13,11 @@
 #include <unordered_map>
 #include <mutex>
 
-#include "/nettverksprog/mesh-network/model/enums/ActionType.h"
-#include "/nettverksprog/mesh-network/model/NodeList.h"
-#include "/nettverksprog/mesh-network/service/IpUtils.h"
+#include "../model/enums/ActionType.hpp"
+#include "../model/NodeList.hpp"
+#include "IpUtils.hpp"
 
-#define PORT 1065
+#define PORT 1082
 
 /*
     TODO:
@@ -117,9 +117,9 @@ private:
         }
     }
 
-    NodeData formatNodeToSend(Node& node, int new_socket) {
+    NodeData formatNodeToSend(Node* node, int new_socket) {
         NodeData nodeData = {0};
-        nodeData.nodeId = node.getNodeId();
+        nodeData.nodeId = node->getNodeId();
         Node* connectedInnerNode = nodeList.getConnectedInnerNode(node);
 
         if (connectedInnerNode != nullptr) {
@@ -133,14 +133,13 @@ private:
         }
         char action[256];
         strcpy(action, "MOVETO_");
-        strcat(action, std::to_string(node.getXPosition()).c_str());
-        if(node.getPriority() == Priority::HIGH) {                            
+        strcat(action, std::to_string(node->getXPosition()).c_str());
+        if(node->getPriority() == Priority::HIGH) {                            
             nodeList.setSocketToMasterNode(new_socket);
         }
         strcpy(nodeData.action, action);
         return nodeData;
     }
-    
 
     void handleConnection(int new_socket) {
         int valread;
@@ -169,8 +168,9 @@ private:
                         nodeList.addNode(node);
                     }
                 }//release lock
-                if (node.getPriority() != Priority::NONE) {
-                    NodeData formatedNodeData = formatNodeToSend(node, new_socket);
+                Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
+                if (nodeListItem->getPriority() != Priority::NONE) {
+                    NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
                     send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
                 }
             } else if (actionTypes[std::string(nodeData.action).substr(0, 7)] == ActionType::REPLACE) {

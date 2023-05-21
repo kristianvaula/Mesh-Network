@@ -1,5 +1,5 @@
-#ifndef MESH_NETWORK_IP_UTILS_H
-#define MESH_NETWORK_IP_UTILS_H
+#ifndef MESH_NETWORK_IP_UTILS_HPP
+#define MESH_NETWORK_IP_UTILS_HPP
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <string.h>
 
 class IpUtils {
 public:
@@ -19,4 +20,4 @@ public:
     void getIPAddress(char* ipAddressBuffer, int bufferSize);
 };
 
-#endif // MESH_NETWORK_IP_UTILS_H
+#endif // MESH_NETWORK_IP_UTILS_HPP
