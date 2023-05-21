@@ -6,6 +6,7 @@
 struct NodeData {
     int nodeId;
     int port;
+    char ipAddress[256];
     char action[256];
 };
 

@@ -12,21 +12,24 @@ class Node {
 private:
     int nodeId;
     int port;
-    int ipAddress;
+    std::string ipAddress;
     int xPosition;
     int yPosition;
     Priority priority;
 
 public:
+    Node* prev;
+    Node* next;
+
     Node();
-    Node(int nodeId, int port, int ipAddress);
-    Node(int nodeId, int port, int ipAddress, int xPosition, int yPosition, Priority priority);
+    Node(int nodeId, int port, std::string ipAddress);
+    Node(int nodeId, int port, std::string ipAddress, int xPosition, int yPosition, Priority priority);
     Node(const Node& other);
     Node(const NodeData& nodeData);
 
     int getNodeId() const;
     int getPort() const;
-    int getIpAddress() const;
+    std::string getIpAddress() const;
     int getXPosition() const;
     void setXPosition(int x);
     int getYPosition() const;

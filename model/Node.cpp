@@ -2,13 +2,13 @@
 
 Node::Node() {}
 
-Node::Node(int nodeId, int port, int ipAddress)
+Node::Node(int nodeId, int port, std::string ipAddress)
         : nodeId(nodeId), port(port), ipAddress(ipAddress), xPosition(0), yPosition(0), priority(Priority::NONE) {
 }
 
-Node::Node(int nodeId, int port, int ipAddress, int xPosition, int yPosition, Priority priority)
+Node::Node(int nodeId, int port, std::string ipAddress, int xPosition, int yPosition, Priority priority)
         : nodeId(nodeId), port(port), ipAddress(ipAddress), xPosition(xPosition), yPosition(yPosition),
-          priority(priority) {
+        priority(priority) {
 }
 
 Node::Node(const Node& other)
@@ -17,7 +17,7 @@ Node::Node(const Node& other)
 }
 
 Node::Node(const NodeData& nodeData) 
-        : nodeId(nodeData.nodeId), port(nodeData.port), ipAddress(0), xPosition(0), yPosition(0), priority(Priority::NONE) {
+        : nodeId(nodeData.nodeId), port(nodeData.port), ipAddress(nodeData.ipAddress), xPosition(0), yPosition(0), priority(Priority::NONE) {
 }
 
 int Node::getNodeId() const {
@@ -28,7 +28,7 @@ int Node::getPort() const {
     return port;
 }
 
-int Node::getIpAddress() const {
+std::string Node::getIpAddress() const {
     return ipAddress;
 }
 
