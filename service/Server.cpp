@@ -13,11 +13,11 @@
 #include <unordered_map>
 #include <mutex>
 
-#include "/nettverksprog/mesh-network/model/enums/ActionType.h"
-#include "/nettverksprog/mesh-network/model/NodeList.h"
-#include "/nettverksprog/mesh-network/service/IpUtils.h"
+#include "../model/enums/ActionType.hpp"
+#include "../model/NodeList.hpp"
+#include "IpUtils.hpp"
 
-#define PORT 1081
+#define PORT 1082
 
 /*
     TODO:

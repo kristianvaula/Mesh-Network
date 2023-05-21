@@ -2,11 +2,11 @@
 // Created by HansMagne Asheim on 16/05/2023.
 //
 
-#ifndef MESH_NETWORK_NODE_H
-#define MESH_NETWORK_NODE_H
+#ifndef MESH_NETWORK_NODE_HPP
+#define MESH_NETWORK_NODE_HPP
 
-#include "/nettverksprog/mesh-network/model/enums/Priority.h"
-#include "/nettverksprog/mesh-network/model/dto/SocketData.h"
+#include "enums/Priority.hpp"
+#include "dto/SocketData.hpp"
 
 class Node {
 private:
@@ -38,4 +38,4 @@ public:
     void setPriority(Priority p);
 };
 
-#endif //MESH_NETWORK_NODE_H
+#endif //MESH_NETWORK_NODE_HPP

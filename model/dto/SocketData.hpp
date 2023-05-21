@@ -1,5 +1,5 @@
-#ifndef MESH_NETWORK_SOCKET_DATA_H
-#define MESH_NETWORK_SOCKET_DATA_H
+#ifndef MESH_NETWORK_SOCKET_DATA_HPP
+#define MESH_NETWORK_SOCKET_DATA_HPP
 
 #include <string>
 
@@ -10,4 +10,4 @@ struct NodeData {
     char action[256];
 };
 
-#endif // MESH_NETWORK_SOCKET_DATA_H
+#endif // MESH_NETWORK_SOCKET_DATA_HPP

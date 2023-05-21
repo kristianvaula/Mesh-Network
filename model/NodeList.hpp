@@ -2,11 +2,13 @@
 // Created by HansMagne Asheim on 16/05/2023.
 //
 
-#ifndef MESH_NETWORK_NODELIST_H
-#define MESH_NETWORK_NODELIST_H
+#ifndef MESH_NETWORK_NODELIST_HPP
+#define MESH_NETWORK_NODELIST_HPP
 
 #include <unordered_map>
-#include "/nettverksprog/mesh-network/model/Node.h"
+#include <iostream>
+
+#include "Node.hpp"
 #include "DoubleLinkedList.cpp"
 
 class NodeList {
@@ -51,4 +53,4 @@ public:
     */
     bool isMeshFull();
 };
-#endif //MESH_NETWORK_NODELIST_H
+#endif //MESH_NETWORK_NODELIST_HPP
