@@ -9,7 +9,7 @@
 #include <iostream>
 
 #include "Node.hpp"
-#include "DoubleLinkedList.cpp"
+#include "DoubleLinkedList.hpp"
 
 class NodeList {
 private:
