@@ -17,7 +17,7 @@
 #include "../model/NodeList.hpp"
 #include "IpUtils.hpp"
 
-#define PORT 1082
+#define PORT 1084
 
 /*
     TODO:
@@ -93,8 +93,9 @@ private:
     }
 
     void displayMenu() {
-        std::cout << "Press 'q' if you want the server to terminate" << std::endl
-                << "Press 'r' if you want to remove a node from the mesh network" << std::endl;
+        std::cout << "Server is running on port: " << PORT << std::endl
+            << "Press 'q' if you want the server to terminate" << std::endl
+            << "Press 'r' if you want to remove a node from the mesh network" << std::endl;
     }
 
     void handleServerInput() {
@@ -151,35 +152,42 @@ private:
         valread = read(new_socket, buffer, sizeof(buffer));
         printf("%s\n", buffer);
 
-        while (run) {
+        while (clientConnection) {
             NodeData nodeData = {0};
             long client_data = recv(new_socket, &nodeData, sizeof(nodeData), 0);
-            std::cout << "droneId: " << nodeData.nodeId << std::endl
-            << "port: " << nodeData.port << std::endl
-            << "ipAddress: " << nodeData.ipAddress << std::endl
-            << "action: " << nodeData.action << std::endl;
-            if (actionTypes[nodeData.action] == ActionType::HELLO) {
-                Node node(nodeData);
-                {//aquire lock
-                    std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                    if (!nodeList.isMeshFull()) {
-                        nodeList.addNodeToMesh(node);
-                    } else {
-                        nodeList.addNode(node);
+
+            if (client_data <= 0) {
+                clientConnection = false;
+                std::cout << "Closing client conection" << std::endl;
+                close(new_socket);
+            } else {
+                std::cout << "droneId: " << nodeData.nodeId << std::endl
+                << "port: " << nodeData.port << std::endl
+                << "ipAddress: " << nodeData.ipAddress << std::endl
+                << "action: " << nodeData.action << std::endl;
+                if (actionFromString(nodeData.action) == ActionType::HELLO) {
+                    Node node(nodeData);
+                    {//aquire lock
+                        std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                        if (!nodeList.isMeshFull()) {
+                            nodeList.addNodeToMesh(node);
+                        } else {
+                            nodeList.addNode(node);
+                        }
+                    }//release lock
+                    Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
+                    if (nodeListItem->getPriority() != Priority::NONE) {
+                        NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
+                        send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
                     }
-                }//release lock
-                Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
-                if (nodeListItem->getPriority() != Priority::NONE) {
-                    NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
-                    send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
+                } else if (actionFromString(nodeData.action) == ActionType::REPLACE) {
+                    std::string action = std::string(nodeData.action);
+                    int replacementNodeId = std::stoi(action.substr(8));
+                    {//aquire lock
+                        std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                        nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
+                    }//release lock
                 }
-            } else if (actionTypes[std::string(nodeData.action).substr(0, 7)] == ActionType::REPLACE) {
-                std::string action = std::string(nodeData.action);
-                int replacementNodeId = std::stoi(action.substr(8));
-                {//aquire lock
-                    std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                    nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
-                }//release lock
             }
         }          
     }
@@ -207,12 +215,6 @@ private:
     void handleConnections() {
         struct sockaddr_in address;
         int addrlen = sizeof(address);
-        actionTypes = {
-            { "REMOVE_NODE", ActionType::REMOVE_NODE },
-            { "MOVETO", ActionType::MOVETO },
-            { "HELLO", ActionType::HELLO },
-            { "REPLACE", ActionType::REPLACE }
-        };
 
         while (run) {
             int new_socket;
