@@ -163,13 +163,15 @@ void NodeList::copyNodeInformation(Node* node, Node* replacementNode) {
 }
 
 void NodeList::replaceNode(const int nodeId, const int replacementNodeId) {
-    std::cout << "Replacing nodeId: " << nodeId << " with replacementNodeId " << replacementNodeId << std:: endl;
     Node* node = getNode(nodeId);
     Node* replacementNode = getNode(replacementNodeId);
     if (node != nullptr && replacementNode != nullptr) {
+        std::cout << "Replacing nodeId: " << nodeId << " with replacementNodeId " << replacementNodeId << std:: endl;
         copyNodeInformation(node, replacementNode);
         resetNode(node);
         updatePosition();
+    } else {
+        std::cerr << "One or both node ids does not exist in the register" << std::endl;
     }
 }
 
