@@ -18,11 +18,11 @@ private:
     bool insertRight = false;
     int meshSize;
     int socketToMasterNode = -1;
-    void resetNode(Node*);//new method
-    void copyNodeInformation(Node*, Node*);//new method
-    void toString(Node*);//new method
-    void updatePosition();//new method
-    Node* getHighPriority();//new method
+    void resetNode(Node*);
+    void copyNodeInformation(Node*, Node*);
+    void toString(Node*);
+    void updatePosition();
+    Node* getHighPriority();
 
 public:
     NodeList(int meshSize);
@@ -37,7 +37,7 @@ public:
     int getSocketToMasterNode() const;
     void setPriority(Node*);
     Node* addNodeToMesh(Node&);
-    void replaceNode(const int, const int);//new method
+    void replaceNode(const int, const int);
     bool isNodeInMesh(const int);
     std::unordered_map<int, Node*> getNodesWithPriority(Priority);
 

@@ -105,14 +105,12 @@ Node* NodeList::addNodeToMesh(Node& node) {
     return nodeListItem;
 }
 
-//new method
 void NodeList::resetNode(Node* node) {
     node->setPriority(Priority::NONE);
     node->setXPosition(0);
     //reset of prev and next is done while replacing node in double linked list
 } 
 
-//new method
 void NodeList::toString(Node* node) {
     std::cout << "nodeId: " << node->getNodeId() << ", xPosition: " << node->getXPosition() << std::endl;
     if (node->prev) {
@@ -158,25 +156,23 @@ void NodeList::updatePosition() {
     }
 }
 
-//new method
 void NodeList::copyNodeInformation(Node* node, Node* replacementNode) {
     meshNetwork.replaceNode(node, replacementNode);
     replacementNode->setPriority(node->getPriority());
     replacementNode->setXPosition(node->getXPosition());
 }
 
-//new method
 void NodeList::replaceNode(const int nodeId, const int replacementNodeId) {
     std::cout << "Replacing nodeId: " << nodeId << " with replacementNodeId " << replacementNodeId << std:: endl;
     Node* node = getNode(nodeId);
     Node* replacementNode = getNode(replacementNodeId);
-
-    copyNodeInformation(node, replacementNode);
-    resetNode(node);
-    updatePosition();
+    if (node != nullptr && replacementNode != nullptr) {
+        copyNodeInformation(node, replacementNode);
+        resetNode(node);
+        updatePosition();
+    }
 }
 
-//new method
 bool NodeList::isNodeInMesh(const int nodeId) {
     auto iterator = nodes.find(nodeId);
     if (iterator != nodes.end()) {
