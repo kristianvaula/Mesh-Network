@@ -93,8 +93,9 @@ private:
     }
 
     void displayMenu() {
-        std::cout << "Press 'q' if you want the server to terminate" << std::endl
-                << "Press 'r' if you want to remove a node from the mesh network" << std::endl;
+        std::cout << "Server is running on port: " << PORT << std::endl
+            << "Press 'q' if you want the server to terminate" << std::endl
+            << "Press 'r' if you want to remove a node from the mesh network" << std::endl;
     }
 
     void handleServerInput() {
