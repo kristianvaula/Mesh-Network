@@ -11,41 +11,44 @@
 
 class NodeList {
 private:
-    std::unordered_map<int, Node> nodes;
+    std::unordered_map<int, Node*> nodes;
     DoubleLinkedList meshNetwork;
     bool insertRight = false;
     int meshSize;
     int socketToMasterNode = -1;
-    void resetNode(Node&);//new method
-    void copyNodeInformation(Node&, Node&);//new method
-    void toString(Node&);//new method
+    void resetNode(Node*);//new method
+    void copyNodeInformation(Node*, Node*);//new method
+    void toString(Node*);//new method
+    void updatePosition();//new method
+    Node* getHighPriority();//new method
 
 public:
     NodeList(int meshSize);
 
-    Node addNode(const Node&);
-    Node addNode(const NodeData&);
-    Node getNode(const int);
-    void editNode(const Node&);
+    Node* addNode(const Node&);
+    Node* addNode(const NodeData&);
+    Node* getNode(const int);
+    //void editNode(Node*);
     int getSize() const;
+
     void setSocketToMasterNode(const int);
     int getSocketToMasterNode() const;
-    void setPriority(Node&);
-    Node addNodeToMesh(Node&);
+    void setPriority(Node*);
+    Node* addNodeToMesh(Node&);
     void replaceNode(const int, const int);//new method
     bool isNodeInMesh(const int);
-    std::unordered_map<int, Node> getNodesWithPriority(Priority) const;
+    std::unordered_map<int, Node*> getNodesWithPriority(Priority);
 
     /*
     * Getter for the connected inner node
     * If the node is master node is null returned, if not is the connected inner node returned
     */
-    Node* getConnectedInnerNode(const Node&);
+    Node* getConnectedInnerNode(Node*);
     
     /*
     * Controls if the mesh has reach it's maximal size
     * Returnes true if the mesh has reaced it's size, otherwise false
     */
-    bool isMeshFull() const;
+    bool isMeshFull();
 };
 #endif //MESH_NETWORK_NODELIST_H

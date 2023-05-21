@@ -29,43 +29,54 @@ public:
             tail = node;
         }
     }
+
+    void removeNode(Node* node) {
+        if (node == nullptr || head == nullptr || tail == nullptr) return;
+
+        if (node->prev != nullptr) {
+            node->prev->next = node->next;
+        }
+        if (node->next != nullptr) {
+            node->next->prev = node->prev;
+        }
+
+        if (node == head) {
+            head = node->next;
+        }
+        if (node == tail) {
+            tail = node->prev;
+        }
+
+        node->prev = nullptr;
+        node->next = nullptr;
+    }
+
     //new method
     void replaceNode(Node* node, Node* replacementNode) {
         if (node == nullptr || replacementNode == nullptr) return;
         if (head == nullptr || tail == nullptr) return;
-    
-        if (node == head) {
-            replacementNode->next = head->next;
-            if (head->next) {
-                head->next->prev = replacementNode;
-            }
-            head = replacementNode;
-            return;
-        }
-    
-        if (node == tail) {
-            replacementNode->prev = tail->prev;
-            if (tail->prev) {
-                tail->prev->next = replacementNode;
-            }
-            tail = replacementNode;
-            return;
-        }
+        if(node == replacementNode) return;
 
-        if (node->prev) {
+        removeNode(replacementNode);
+
+        if (node->prev != nullptr) {
             node->prev->next = replacementNode;
         }
-        if (replacementNode->prev) {
-            replacementNode->prev->next = replacementNode;
-        }
-        if (node->next) {
+        if (node->next != nullptr) {
             node->next->prev = replacementNode;
         }
-        if (replacementNode->next) {
-            replacementNode->next->prev = replacementNode;
-        }
-    
+
         replacementNode->prev = node->prev;
         replacementNode->next = node->next;
+
+        if (node == head) {
+            head = replacementNode;
+        }
+        if (node == tail) {
+            tail = replacementNode;
+        }
+
+        node->prev = nullptr;
+        node->next = nullptr;
     }
 };
