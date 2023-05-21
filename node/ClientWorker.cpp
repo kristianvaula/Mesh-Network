@@ -1,7 +1,7 @@
 #include "ClientWorker.hpp"
 
-ClientWorker::ClientWorker(int* nodeId, int* port,std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
-: Worker(nodeId, port, messageQueue, messageMutex,cv){
+ClientWorker::ClientWorker(int* nodeId, int* port, std::atomic<int>* xPosition, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+: xPosition_(xPosition), Worker(nodeId, port, messageQueue, messageMutex,cv){
 }
 
 ClientWorker::~ClientWorker() {}
@@ -50,14 +50,12 @@ void ClientWorker::RunClient(const std::string& serverPort) {
 void ClientWorker::HandleAction(NodeData& nodeData) {
   ActionType action = actionFromString(nodeData.action); 
   switch (action) {
-    case (ActionType::HELLO): 
+    case (ActionType::HELLO): // Hello 
       std::cout << "[Server] Hello" << std::endl; 
       break; 
-    case (ActionType::MOVETO): 
+    case (ActionType::MOVETO):// Move to <x> command 
       std::cout << "[Server] Move To" << std::endl;
-      SendOK(); 
-      //Initiate flying logic 
-      //Initiate new server connect 
+      HandleMoveTo(nodeData); 
       break; 
     case (ActionType::REMOVE_NODE): 
       std::cout << "[Server] Remove Node" << std::endl;
@@ -75,6 +73,15 @@ void ClientWorker::HandleAction(NodeData& nodeData) {
       std::cout << "[Server] Invalid action type" << std::endl; 
       break; 
   }
+}
+
+void ClientWorker::SimulateMovement(int pos) {
+  std::cout << "[Node] Moving to " << pos << "."; 
+  for (uint8_t i = 0; i < 3; i++) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::cout << "."; 
+  }
+  std::cout << std::endl; 
 }
 
 bool ClientWorker::IsPassthrough(int nodeId) {
@@ -122,36 +129,79 @@ int ClientWorker::Connect() {
   return 0; 
 } 
 
-int ClientWorker::SendHello() {
-  NodeData nodeData = { 0 }; 
-  std::string actionStr = actionToString(ActionType::HELLO); 
-  strcpy(nodeData.action, actionStr.c_str()); 
+int ClientWorker::HandleMoveTo(NodeData& nodeData) {
+  int x = xPosition_->load();
+  char* ip = nodeData.ipAddress; 
+  int newPort = nodeData.port; 
+  std::string action = nodeData.action; 
+  std::cout << "Action: " << action << std::endl; 
+  //Fetch the destination
+  size_t underscorePos = action.find('_'); 
+  int destination; 
+  if (underscorePos != std::string::npos) {
+    std::string arg = action.substr(underscorePos+1); 
+    std::cout << "Arg: " << arg << std::endl; 
+
+    try{
+      destination = std::stoi(arg); 
+    }
+    catch(std::invalid_argument e){
+      std::cerr << "[ClientWorker] Received invalid positon" << std::endl; 
+      return 1; 
+    }
+    catch(std::out_of_range e){
+      std::cerr << "[ClientWorker] Received invalid positon" << std::endl;
+      return 1;  
+    }
+  }
+
+  //Convert port 
+  porttype port; 
+  if(newPort >= 0 && newPort <= std::numeric_limits<porttype>::max()) {
+    port = static_cast<porttype>(newPort); 
+  }
+  else {
+    std::cerr << "[ClientWorker] Received invalid port" << std::endl;
+    return 1;  
+  }
+
+  SendOK();
+  close(socket_); 
+
+  //Simulate movement 
+  SimulateMovement(destination); 
   {
     std::unique_lock<std::mutex> lock(workerMutex_); 
-    nodeData.nodeId = *nodeId_; 
-    nodeData.port = *port_; 
+    xPosition_->store(destination); 
+    serverPort_ = port; 
   }
-  int bytesSent = send(socket_, &nodeData, sizeof(nodeData), 0); 
-   if (bytesSent == -1) {
-    std::cerr << "[ClientWorker] Failed to send data" << std::endl;
+  if (Connect() != 0) {
     return 1; 
+  }
+  return 0; 
+}
+
+int ClientWorker::SendResponse(ActionType actionType) {
+  NodeData nodeData = { 0 };
+  std::string actionStr = actionToString(actionType);
+  strcpy(nodeData.action, actionStr.c_str());
+  {
+    std::unique_lock<std::mutex> lock(workerMutex_);
+    nodeData.nodeId = *nodeId_;
+    nodeData.port = *port_;
+  }
+  int bytesSent = send(socket_, &nodeData, sizeof(nodeData), 0);
+  if (bytesSent == -1) {
+    std::cerr << "[ClientWorker] Failed to send data" << std::endl;
+    return 1;
   }
   return 0;
 }
 
+int ClientWorker::SendHello() {
+  return SendResponse(ActionType::HELLO); 
+}
+
 int ClientWorker::SendOK() {
-  NodeData nodeData = { 0 }; 
-  std::string actionStr = actionToString(ActionType::OK); 
-  strcpy(nodeData.action, actionStr.c_str()); 
-  {
-    std::unique_lock<std::mutex> lock(workerMutex_); 
-    nodeData.nodeId = *nodeId_; 
-    nodeData.port = *port_; 
-  }
-  int bytesSent = send(socket_, &nodeData, sizeof(nodeData), 0); 
-   if (bytesSent == -1) {
-    std::cerr << "Failed to send data" << std::endl;
-    return 1; 
-  }
-  return 0;
+  return SendResponse(ActionType::OK); 
 }
