@@ -6,7 +6,7 @@ typedef std::uint16_t porttype;
 
 class ClientWorker : public Worker{
   public: 
-    ClientWorker(); 
+    ClientWorker(std::queue<std::string>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
     ~ClientWorker(); 
 
     void RunClient(const std::string& serverPort); 
@@ -15,7 +15,8 @@ class ClientWorker : public Worker{
     int Connect(); 
 };
 
-ClientWorker::ClientWorker() : Worker(){}
+ClientWorker::ClientWorker(std::queue<std::string>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) : Worker(messageQueue, messageMutex,cv){
+}
 
 ClientWorker::~ClientWorker() {}
 
@@ -37,25 +38,24 @@ void ClientWorker::RunClient(const std::string& serverPort) {
   }
 
   while (running_.load()) {
-    bytesRead = read(socket_, buffer, 1024); 
+    bytesRead = read(socket_, buffer, 1024); //Receive string requests 
     if(bytesRead > 0) {
-      std::cout << buffer << std::endl; 
-      memset(buffer, 0, sizeof(buffer)); 
+      std::cout << "[Server] " << buffer << std::endl; 
+      {
+        //Convert into struct NodeData in InterpretRequest()
+        //Handle them in HandleRequest()
+        //Respond 
+        EnqueueInstruction(buffer); //If not for this node, pass on 
+        memset(buffer, 0, sizeof(buffer)); 
+      }
+      
     }
     else {
       std::cout << "[ClientWorker] Receiveed empty server message, closing socket" << std::endl;
       close(socket_); 
       break;  
     }
-    
-    //Receive string requests  
-    //Convert into struct NodeData in InterpretRequest()
-    //Handle them in HandleRequest()
-    //Get response with CreateResponse()
-    //Send response; 
-    
   }
-
   close(socket_);  
 }
 

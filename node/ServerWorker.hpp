@@ -1,25 +1,30 @@
 #pragma once
-
 #include "Worker.hpp"
 #include <functional>
+#include <set> 
 
 typedef std::uint16_t porttype; 
 
 class ServerWorker : public Worker {
   public:   
-    ServerWorker(); 
+    ServerWorker(std::queue<std::string>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
     ~ServerWorker();
 
     void RunServer(const std::string& serverPort); 
 
   private: 
     struct sockaddr_in serverAddress_;
+    std::mutex clientSocketsMutex_; 
+    std::set<int> connectedClientSockets_; 
 
+    void BroadcastMessages(); 
     void HandleClient(int clientSocket); 
     int SetupServer(); 
 };
 
-ServerWorker::ServerWorker() : Worker(){}
+ServerWorker::ServerWorker(std::queue<std::string>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+: Worker(messageQueue, messageMutex, cv), clientSocketsMutex_(), connectedClientSockets_() {
+}
 
 ServerWorker::~ServerWorker() {}
 
@@ -30,6 +35,9 @@ void ServerWorker::RunServer(const std::string& serverPort) {
   if (SetupServer() != 0) {
     return; 
   }
+
+  std::thread broadcastThread(&ServerWorker::BroadcastMessages, this); 
+  broadcastThread.detach(); 
 
   while (running_.load()) {
     struct sockaddr_in clientAddress{}; 
@@ -48,11 +56,47 @@ void ServerWorker::RunServer(const std::string& serverPort) {
   return; 
 }
 
+void ServerWorker::BroadcastMessages() {
+  while (running_.load()) {
+    std::queue<std::string> messages; 
+    {
+      std::unique_lock<std::mutex> lock(*messageMutex_);
+      while(messageQueue_.empty() && running_.load()){
+        cv_->wait(lock, [this] { return !messageQueue_.empty() || !running_.load(); });
+      }
+      while (!messageQueue_.empty()) {
+        messages.push(messageQueue_.front());
+        messageQueue_.pop();
+      }
+    }
+
+    while (!messages.empty()) {
+      std::string message = std::move(messages.front()); 
+      messages.pop(); 
+
+      {
+        std::unique_lock<std::mutex> lock(clientSocketsMutex_); 
+        for(const auto& clientSocket : connectedClientSockets_) {
+          int bytesSent = send(clientSocket, message.c_str(), message.length(), 0); 
+          if (bytesSent <= 0) {
+            std::cerr << "[Broadcast] Failed to send message" << std::endl;
+            break; 
+          }
+        }
+      }
+    }
+  }
+}
+
 void ServerWorker::HandleClient(int clientSocket) {
+  {
+    std::unique_lock<std::mutex> lock(clientSocketsMutex_); 
+    connectedClientSockets_.insert(clientSocket); 
+  }
   char buffer[1024] = { 0 }; 
   int bytesRead; 
   while ((bytesRead = read(clientSocket, buffer, 1024)) > 0) {
-    std::cout << "[ServerWorker] Received message from client: " << buffer << std::endl;
+    std::cout << "[Client] " << buffer << std::endl;
     std::string response = "Hello from server";
     int bytesSent = send(clientSocket, response.c_str(), response.length(), 0);
     if (bytesSent <= 0) {
