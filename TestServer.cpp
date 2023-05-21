@@ -4,21 +4,32 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <chrono>
 #include <thread>
+#include "model/dto/SocketData.h"
 
 typedef std::uint16_t porttype;
 
 void HandleClient(int clientSocket) {
-  char buffer[1024] = {0};
+  NodeData nodeData = { 0 }; 
   int bytesRead; 
-  while ((bytesRead = read(clientSocket, buffer, 1024)) > 0) {
-    std::cout << "[Server] Received message from client: " << buffer << std::endl;
-    std::string response = "Hello from testserver";
-    int bytesSent = send(clientSocket, response.c_str(), response.length(), 0);
-    if (bytesSent <= 0) {
-      std::cerr << "[Server] Failed to send response" << std::endl;
+  int i = 0; 
+  while ((bytesRead = recv(clientSocket, &nodeData, sizeof(nodeData), 0)) > 0) {
+    std::cout << "[Server] Received message from client: " << nodeData.action << std::endl;
+    NodeData nodeDataOut = { 0 }; 
+    if(i == 0) {
+      std::string actionStr = "HELLO"; 
+      strcpy(nodeData.action, actionStr.c_str()); 
+      nodeData.nodeId = 1; 
+      nodeData.port = 3000; 
+      int bytesSent = send(clientSocket, &nodeData, sizeof(nodeData), 0); 
     }
-    memset(buffer, 0, sizeof(buffer));
+    else if(i == 1){
+      break; 
+    }
+    
+    i++; 
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000)); 
   }
   close(clientSocket);
 }
