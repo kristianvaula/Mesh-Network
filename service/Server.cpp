@@ -17,7 +17,7 @@
 #include "../model/NodeList.hpp"
 #include "IpUtils.hpp"
 
-#define PORT 1083
+#define PORT 1084
 
 /*
     TODO:
@@ -152,35 +152,42 @@ private:
         valread = read(new_socket, buffer, sizeof(buffer));
         printf("%s\n", buffer);
 
-        while (run) {
+        while (clientConnection) {
             NodeData nodeData = {0};
             long client_data = recv(new_socket, &nodeData, sizeof(nodeData), 0);
-            std::cout << "droneId: " << nodeData.nodeId << std::endl
-            << "port: " << nodeData.port << std::endl
-            << "ipAddress: " << nodeData.ipAddress << std::endl
-            << "action: " << nodeData.action << std::endl;
-            if (actionFromString(nodeData.action) == ActionType::HELLO) {
-                Node node(nodeData);
-                {//aquire lock
-                    std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                    if (!nodeList.isMeshFull()) {
-                        nodeList.addNodeToMesh(node);
-                    } else {
-                        nodeList.addNode(node);
+
+            if (client_data <= 0) {
+                clientConnection = false;
+                std::cout << "Closing client conection" << std::endl;
+                close(new_socket);
+            } else {
+                std::cout << "droneId: " << nodeData.nodeId << std::endl
+                << "port: " << nodeData.port << std::endl
+                << "ipAddress: " << nodeData.ipAddress << std::endl
+                << "action: " << nodeData.action << std::endl;
+                if (actionFromString(nodeData.action) == ActionType::HELLO) {
+                    Node node(nodeData);
+                    {//aquire lock
+                        std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                        if (!nodeList.isMeshFull()) {
+                            nodeList.addNodeToMesh(node);
+                        } else {
+                            nodeList.addNode(node);
+                        }
+                    }//release lock
+                    Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
+                    if (nodeListItem->getPriority() != Priority::NONE) {
+                        NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
+                        send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
                     }
-                }//release lock
-                Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
-                if (nodeListItem->getPriority() != Priority::NONE) {
-                    NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
-                    send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
+                } else if (actionFromString(nodeData.action) == ActionType::REPLACE) {
+                    std::string action = std::string(nodeData.action);
+                    int replacementNodeId = std::stoi(action.substr(8));
+                    {//aquire lock
+                        std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                        nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
+                    }//release lock
                 }
-            } else if (actionFromString(nodeData.action) == ActionType::REPLACE) {
-                std::string action = std::string(nodeData.action);
-                int replacementNodeId = std::stoi(action.substr(8));
-                {//aquire lock
-                    std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                    nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
-                }//release lock
             }
         }          
     }
