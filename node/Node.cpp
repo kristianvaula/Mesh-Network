@@ -73,14 +73,20 @@ bool Node::IsServerRunning() const {
   return serverRunning_.load();
 }
 
-int main(int argc, char* argv[]) {
-  if (argc < 3) {
-    std::cerr << "Usage: ./main <id> <port>" << std::endl;
-    return 1;
-  }
+porttype GetRandomPort() {
+  constexpr int minPort = 1024;
+  constexpr int maxPort = 65535;
 
-  int id = std::atoi(argv[1]); 
-  porttype port = static_cast<porttype>(std::atoi(argv[2]));
+  std::random_device rd;
+  std::mt19937 gen(rd());
+
+  std::uniform_int_distribution<porttype> dist(minPort, maxPort);
+  return dist(gen);
+}
+
+int main() {
+  porttype port = GetRandomPort(); 
+  int id = port; 
   std::queue<NodeData> messageQueue; 
   std::mutex messageMutex; 
   std::condition_variable cv; 
@@ -91,15 +97,15 @@ int main(int argc, char* argv[]) {
   //Delay to ensure server print status before menu
   std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
   while(true) {
-    std::cout << "[ Node ] 'c' - Connect client" << std::endl;
-    std::cout << "[ Node ] 'q' - Exit" << std::endl; 
-    std::cout << "[ Node ] Choose an option: " << std::endl;
+    std::cout << " 'c' - Connect client" << std::endl;
+    std::cout << " 'q' - Exit" << std::endl; 
+    std::cout << "Choose an option: " << std::endl;
     char choice;
     std::cin >> choice;
     
     if (choice == 'c' && !node.IsClientRunning()) {
       std::string port;
-      std::cout << "[ Node ] Enter server port the client should connect to: ";
+      std::cout << "Enter server port the client should connect to: ";
       std::cin >> port;
       node.StartClient(port); 
     } 
@@ -108,9 +114,9 @@ int main(int argc, char* argv[]) {
       break; 
     } 
     else {
-      std::cout << "[ Node ] Invalid choice. Please try again." << std::endl;
+      std::cout << "Invalid choice. Please try again." << std::endl;
     }
   }
-  std::cout << "[ Node ] Shutting down" << std::endl;
+  std::cout << "Shutting down" << std::endl;
   return 0; 
 }
