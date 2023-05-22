@@ -1,77 +1,100 @@
-# SceneCapture – mobilt trådløst mesh-nettverk
+# Mesh Network – mobilt trådløst mesh-nettverk
 
 ## Introduksjon
 
-SceneCapture er et mobilt trådløst mesh-nettverk designet for dronefilming av scener. Programmet muliggjør tilkobling av noder til en sentral server som styrer dronenes plassering og prioritet. Programmet tar også hensyn til muligheten for å erstatte droner i nettverket. Formålet med programmet er å muliggjøre filming av scener over store områder der kommunikasjon mellom nabo-noder er nødvendig på grunn av avstanden til serveren. Med dette programmet er det mulig å ha en avstand til serveren som overstiger den maksimale kommunikasjonsrekkevidden. 
+Mesh Network er et mobilt trådløst mesh-nettverk designet for kontrollering av noder i en dimensjon. Programmet legger til rette for tilkobling av noder til en sentral server. Denne styrer nodens plassering i mesh-nettverket og hvilken prioritet noden har. Programmet gjør det også mulig å erstatte noder i nettverket. Formålet med programmet er å skape et nettverk der mobile enheter danner et mesh-nettverk og kan kommunisere gjennom hverandre. Dette kan benyttes i for eksempel droner og andre nettverksstyrte mobile enheter. I full skala skal programmet gjøre det mulig å plassere enheter over større områder, der kommunikasjon mellom nabo-noder er nødvendig på grunn av avstanden til hovedserveren.  
 
 ## Implementert funksjonalitet
 
 Beskrivelsen av implementerte funksjonaliteten er delt inn i to deler. Første beskrives implementert funksjonaliteten som er implementert i serveren, etterfulgt av neste seksjon som tar for seg funksjonaliteten implementert i noden. 
 
-### Server - SceneCapture
+### Server 
 
-Serveren til SceneCapture har to hovedfunksjoner, den har mulighet for tilkobling av noder og organisering av noder.
+Serveren til applikasjonen har to hovedfunksjoner, den har mulighet for tilkobling av noder og organisering av noder.
 
 Den første hovedfunksjonaliteten er nodens plassering ved tilkobling til serveren. Serveren bruker trådprogrammering for å håndtere innkommende forbindelser fra klientnoder. Når server mottar en forbindelse, tildeles en tråd for å håndtere denne. Tråden sjekker statusen på mesh-nettverket og bestemmer om noden skal plasseres i mesh-nettverket eller i en pool. Noden vil plasseres i mesh-nettverket dersom mesh-nettverket ikke har nådd sin definerte kapasitet. Hvis maksimal kapasitet er nådd blir nye noder plasser i en pool.  
 
-Den andre hovedfunksjonaliteten er erstatning av noder i mesh-nettverket. Dette oppnås ved å kommunisere med serveren hvilken node skal erstattes i nettverket. Serveren sender deretter en forespørsel til noden i mesh nettverket med høy prioritet. Masternoden i mesh nettverket identifiserer hvilken node i nettverket som skal erstatte noden som ønskes fjernet, og sende denne informasjonen til serveren. Serveren flytter erstatningsnoden til riktig lokasjonen og setter tilhørende prioritet. Noden som blir erstattet, blir nullstilt og plassert i poolen. 
+Den andre hovedfunksjonaliteten er erstatning av noder i mesh-nettverket. Dette oppnås ved å kommunisere med serveren hvilken node som skal erstattes i nettverket. Serveren sender deretter en forespørsel til noden i mesh nettverket med høy prioritet. Masternoden i mesh nettverket identifiserer hvilken node i nettverket som skal erstatte noden som ønskes fjernet, og sender denne informasjonen til serveren. Serveren flytter erstatningsnoden til riktig lokasjonen og setter tilhørende prioritet. Noden som blir erstattet, blir nullstilt og plassert i poolen. 
 
 ### Node
 
-En node kan fungere både som en server og som en klient, og vil ha ulik funksjonalitet for hver av disse rollene.  
+En node er en enhet i mesh-nettverket. Den fungerer både som en tjener for andre noder i nettverket, og som en klient enten i en annen node eller i hovedtjeneren.   
 
-#### Servernode
+#### Hovedtråd
+Hovedtrådens oppgave er først å initiere node-objektet og sette i gang servertråden. Siden ClientWorker og ServerWorker er avhengig av mye delt data, opprettes dette av hovedtråden slik at referanser og pekere kan benyttes i konstruksjonen av disse Worker klassene. Deretter venter den på at bruker-input og setter opp klienttråden med ønsket port nummer. Den har også ansvar for å stoppe applikasjonen dersom brukeren velger dette. 
 
-En servernode består av to hovedfunksjonaliteter, den kan legge til en node i nettverket og håndtere oppgaver fra både klientnoder og fra SceneCapture-serveren. 
+#### ClientWorker
+Noden har en dedikert tråd som kjører i ClientWorker klassen. Denne kobler seg opp mot enten hovedserveren eller en annen node i nettverket. Når tilkoblingen er etablert, lytter klientnoden etter instruksjoner fra servernoden og behandler dem. Hvis klienttråden mottar en instruksjon som ikke er til seg selv, legges instruksjonen til i en delt kø som ServerWorker kan behandle (se neste avsnitt). Dersom instruksjonen er ment for noden, så behandles den i HandleAction metoden. 
 
-Servernoden bruker trådprogrammering og har en dedikert tråd som venter på tilkoblinger fra noder. Hvis den mottar en tilkobling, delegeres det en ny tråd for å legge til noden i nettverket. En node blir kun lagt til hvis den bekreftes som en gyldig node ved å sende en melding med action "HELLO" til servernode. 
+#### ServerWorker
+Noden har en dedikert tråd som starter en tjener i ServerWorker klassen. I oppsetsfasen setter den opp tjeneren, og dedikerer en arbeidertråd som kjører i HandleInstructions. Deretter lytter tjener-tråden på nye tilkoblinger. Hvis den mottar en tilkobling, delegeres det en ny tråd for å legge til noden i nettverket. En node blir kun lagt til hvis den bekreftes som en gyldig node ved å sende en melding med action "HELLO" til servernode. Dermed blir noden lagt til i en liste og behandlings-tråden avsluttes. 
 
-Servernoden kan også håndtere oppgaver fra både klienter og SceneCapture-serveren. Instruksjonstråden bruker tilstandsvariabler for å holde oversikt over tilgjengelige oppgaver. Når en oppgave mottas, sjekker node-serveren om oppgaven er til seg selv eller tilhører en annen klient i nettverket. Hvis oppgaven er til seg selv, behandler servernoden oppgaven ved mulighet. Mens hvis oppgaven tilhører en annen klient vil servernoden kringkaste instruksjonen til alle klienter. 
+Servernoden kan håndtere oppgaver som blir gitt av ClientWorker tråden. Arbeidertråden bruker condition_variable til å vente på oppgaver i messageQueue køen, som er en delt kø mellom ClientWorker og ServerWorker. Når en oppgave mottas, sjekker node-serveren om oppgaven er til seg selv eller tilhører en annen klient i nettverket. Hvis oppgaven er til seg selv, behandler servernoden oppgaven. Dersom oppgaven er ment for en annen klient, vil servernoden kringkaste instruksjonen til alle oppkoblede klienter. 
 
-#### Klientnode
-
-En klientnode har mulighet til å koble seg til servernoden. Når tilkoblingen er etablert, lytter klientnoden etter instruksjoner fra servernoden og behandle dem. Hvis klientnoden mottar en instruksjon som ikke er til seg selv, legges instruksjonen til i kø for instruksjoner i node-serveren. 
+#### Worker
+Superklasse som de andre workerklassene arver av. Definerer delt data og enkelte metoder for å jobbe på disse. 
 
 ## Nåværende mangler og svakheter
 
-Levert program er den første versjonen av SceneCapture programmet og har derav noen mangler og svakheter. Her er en liste over identifiserte mangler og svakheter av et ferdig program av SceneCapture og har derav mangler og svakheter:
+Levert program er den første versjonen av programmet og har derav noen mangler og svakheter. Her er en liste over identifiserte mangler og svakheter:
 
-- Manglende kommunikasjon om behov om erstatning: En node har for øyeblikket ikke mulighet til å kommunisere når den trenger å bli erstattet. 
+- Simulert Bevegelse: Løsningen vår tar ikke høyde for å styre de mobile enhetene. Hver node har en verdi for sin plassering langs x-aksen for å simulere bevegelsen og kommunikasjonen mellom entitetene som avgjør denne posisjonen. Det benyttes også en metode for å simulere bevegelse som kaller på trådens sleep_for metode. 
 
-- Begrenset node plassering: Nåværende implementasjon av server plasserer noder i en dimensjon. Dette begrenser muligheten for at droner kan dekke flere kameravinkler. 
+- Mulighet for å plassere noder ut igjen: Vi har ikke noen mulighet for å gjenplassere noder som ligger i poolen. 
+
+- Manglende kommunikasjon om behov for erstatning: En node har for øyeblikket ikke mulighet til å kommunisere når den trenger å bli erstattet. 
+
+- Begrenset node plassering: Nåværende implementasjon av server plasserer noder i en dimensjon.
 
 - Oppdatering av noder ved erstatning: Når en node erstattes i nettverket, vil serveren gå gjennom alle noder og oppdatere deres posisjon og prioritet. Dette kan bli en tidkrevende prosess dersom nettverket tillater et stort antall noder. 
 
-- Manglende brukervennlig applikasjon: Det mangler en dedikert applikasjon for programmet som kan gjøre det mer brukervennlig for brukere. 
+- Manglende brukervennlig applikasjon: Det mangler et grafisk brukergrensesnitt for applikasjon som kan gjøre det mer brukervennlig.
+
+- Utvidet format og mengde: Per nå er formatet på nettverket en-dimensjonelt med 5 posisjoner, der de sentrale har høyest prioritet. 
 
 ## Fremtidig arbeid
 
 Ved fremtidig arbeid er det mulig å ta for seg følgende punkter for å imøtekomme nevnte mangler og svakheter:
 
-- Selvinitiert kommunikasjon for noden: En mulig forbedring er å gi noden evnen til å kommunisere når den trenger å bli erstattet. For eksempel kan noden automatisk sende en forespørsel om å bli erstattet når batteristatusen faller under en bestemt prosentandel.  
+- Mulighet for å plassere noder ut igjen: I denne versjonen blir noden automatisk plassert ut i nettverket når den kobles til. Deretter kan man fjerne den igjen om man ønsker og da legges den tilbake i poolen. Det er behov for en oversikt over nodene som er koblet til tjeneren men som ikke er plassert ut i nettverket. Her må brukeren kunne velge hvilken han ønsker å plassere ut igjen. 
 
-- Utvidelse til flere dimensjoner: For å dekke flere kameravinkler og optimalisere plasseringen av noder i scenen er det mulig å implementere funksjonalitet for plassering av noder i flere dimensjoner. 
+- Selvinitiert kommunikasjon for noden: En mulig forbedring er å gi noden evnen til å kommunisere når den trenger å bli erstattet. For eksempel kan noden automatisk sende en forespørsel om å bli erstattet når batteristatusen faller under en bestemt prosentandel. Dette vil kreve en utvidelse av noden som tillater at klienten også kan sende meldinger mot en tjener.  
+
+- Utvidelse til flere dimensjoner: For å skape en mer realistisk implementasjon. 
 
 - Optimalisering av oppdateringsfunksjonalitet: For å gjøre programmet mer effektivt kan funksjonaliteten for oppdatering av posisjon og prioritet til noder forbedres. De nåværende kompleksiteten er O(n), det er iallfall mulig å redusere den til O(n/2) ved å utføre optimaliseringer.
 
 - Utvikling av brukervennlig applikasjon: For å gjøre programmet mer brukervennlig, er det mulig å utvikle en tilhørende applikasjon for brukerne. 
 
-## Installasjonsinstruksjoner
+- Begrenset node plassering: Legge til rette for at bruker velger hvordan nodene skal plasseres, og legge til rette for å bestemme hvor mange noder som skal ut i nettverket. 
 
-For å kjøre programmet er det nødvendig å kjøre det i en Linux terminal. Deretter kan en følge trinnene nedenfor:
+## Kjøring og installasjon
 
-1. Klone repositoriet fra GitLab eller pakk ut programmet fra zip-filen.
+**Merk: Dette programmet er designet for å kjøre i et Unix-terminalmiljø. Hvis du bruker Windows, må du sørge for at du har et Linux miljø installert før du fortsetter.**
+
+1. Klone repositoriet fra GitLab eller pakk ut programmet fra zip-fil.
+- [**Gitlab repo:**](https://gitlab.stud.idi.ntnu.no/hmasheim/mesh-network)
 
 ### Server
 
-1. Kompiler serveren og tilhørende filer. Hvis du står i rotkatalogen og har g++ kompilatoren installert, kan du bruke følgende kommando: `g++ -o Server service/Server.cpp service/IpUtils.cpp model/DoubleLinkedList.cpp model/Node.cpp model/NodeList.cpp model/enums/ActionType.cpp -pthread`
+1. Kompiler serveren og tilhørende filer. Dersom du har g++ kompilatoren installert, kan du fra rotkatalogen bruke kommandoen: 
+`g++ -o Server service/Server.cpp service/IpUtils.cpp model/DoubleLinkedList.cpp model/Node.cpp model/NodeList.cpp model/enums/ActionType.cpp -pthread`
 
-2.	Kjør serveren. Hvis du brukte kommandoen ovenfor for kompilering, kan du gjøre følgende: `./Server`
+2.	For å kjøre den kompilerte serveren: `./Server`
 
-### Klient
+### Node
+1. Kompiler serveren og tilhørende filer. Dersom du har g++ kompilatoren installert, kan du fra rotkatalogen bruke kommandoen:
 `g++ -o Node Node.cpp Worker.cpp ClientWorker.cpp ServerWorker.cpp ../model/enums/ActionType.cpp  -pthread`
 
+2.	For å kjøre den kompilerte serveren: `./Node`
+
 ## Instruksjoner for å bruke løsningen
+
+### Server 
+Når serveren kjøres starter serveren automatisk opp. I terminalvinduet får man opp hvilken port serveren kjøres på. Dette portnummeret brukes i Noden for å koble seg til serveren. Deretter kan man skrive inn 'r' for å fjerne en node fra mesh-nettverket eller 'q' for å avslutte serveren 
+
+### Node
+Når noden kjøres representerer den en enhet i applikasjonen. Man kjører flere parallele noder for å simulere flere enheter i mesh-nettverket. Når man kjører en node kan man skrive inn 'q' for å avslutte noden og 'c' for å koble seg opp mot serveren. Dersom man velger 'c', blir man bedt om å skrive inn portnummeret til hovedserveren. Dette printes i terminalen når serveren kjøres.  
 
 ## Team medlemmer
 - `Kristian Vaula Jensen`

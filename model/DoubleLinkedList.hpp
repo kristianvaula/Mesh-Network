@@ -17,6 +17,7 @@ public:
     void insertEnd(Node*);
     void replaceNode(Node*, Node*);
     void removeNode(Node*);
+    Node* getHead();
 };
 
 #endif //MESH_NETWORK_DOUBLE_LINKED_LIST_HPP

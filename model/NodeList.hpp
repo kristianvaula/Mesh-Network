@@ -45,6 +45,8 @@ public:
     void replaceNode(const int, const int);
     bool isNodeInMesh(const int);
     bool isNodeInList(const int);
+    bool isMeshEmpty();
+    void printMeshNetwork();
     std::unordered_map<int, Node*> getNodesWithPriority(Priority);
 
     /*

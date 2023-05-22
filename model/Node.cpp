@@ -52,6 +52,13 @@ Priority Node::getPriority() const {
     return priority;
 }
 
+std::string Node::getPriorityName() {
+    if (priority == Priority::HIGH) return "HIGH";
+    else if (priority == Priority::MEDIUM) return "MEDIUM";
+    else if (priority == Priority::LOW) return "LOW";
+    else return "NONE";
+}
+
 void Node::setPriority(Priority p) {
     priority = p;
 }
