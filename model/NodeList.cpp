@@ -58,13 +58,10 @@ int NodeList::getSocketToMasterNode() const {
 void NodeList::setPriority(Node* node) {
     if (node->getXPosition() == 0) {
         node->setPriority(Priority::HIGH);
-        std::cout << "[NodeList] Sets HIGH priority for nodeId: " << node->getNodeId() << std::endl;
     } else if (node->getXPosition() == 1 || node->getXPosition() == -1) {
         node->setPriority(Priority::MEDIUM);
-        std::cout << "[NodeList] Sets MEDIUM priority for nodeId: " << node->getNodeId() << std::endl;
     } else {
         node->setPriority(Priority::LOW);
-        std::cout << "[NodeList] Sets LOW priority for nodeId: " << node->getNodeId() << std::endl;
     }
 }
 
@@ -85,7 +82,6 @@ Node* NodeList::addNodeToMesh(Node& node) {
         }
         this->insertRight = true;
     }
-    std::cout << "[NodeList] Sets xPosition to nodeId: " << nodeListItem->getNodeId() << " to be xpos: " << nodeListItem->getXPosition() << std::endl;
     this->setPriority(nodeListItem);
     return nodeListItem;
 }
@@ -95,6 +91,15 @@ void NodeList::resetNode(Node* node) {
     node->setXPosition(0);
     //reset of prev and next is done while replacing node in double linked list
 } 
+
+void NodeList::printMeshNetwork() {
+    Node* current = meshNetwork.getHead();
+
+    while (current != nullptr) { 
+        std::cout << "[ NodeList ] #" << current->getNodeId() << " xPos: " << current->getXPosition() << " priority: " << current->getPriorityName() << std::endl; 
+        current = current->next; 
+    } 
+}
 
 void NodeList::toString(Node* node) {
     std::cout << "nodeId: " << node->getNodeId() << ", xPosition: " << node->getXPosition() << std::endl;
@@ -126,18 +131,14 @@ void NodeList::updatePosition() {
         while(currentNode->next) {
             currentNode->next->setXPosition(currentNode->getXPosition() + 1);
             setPriority(currentNode->next);
-            std::cout << "[NodeList] updating positon to nodeId: " << currentNode->getNodeId() << " the xPosition is now: " << currentNode->getXPosition() << std::endl;
             currentNode = currentNode->next;
         }
-        std::cout << "[NodeList] updating positon to nodeId: " << currentNode->getNodeId() << " the xPosition is now: " << currentNode->getXPosition() << std::endl;
         currentNode = highPriorityNode;
         while(currentNode->prev) {
             currentNode->prev->setXPosition(currentNode->getXPosition() - 1);
             setPriority(currentNode->prev);
-            std::cout << "[NodeList] updating positon to nodeId: " << currentNode->getNodeId() << " the xPosition is now: " << currentNode->getXPosition() << std::endl;
             currentNode = currentNode->prev;
         }
-        std::cout << "[NodeList] updating positon to nodeId: " << currentNode->getNodeId() << " the xPosition is now: " << currentNode->getXPosition() << std::endl;
     }
 }
 
@@ -151,17 +152,22 @@ void NodeList::replaceNode(const int nodeId, const int replacementNodeId) {
     Node* node = getNode(nodeId);
     Node* replacementNode = getNode(replacementNodeId);
     if (node != nullptr && replacementNode != nullptr) {
-        std::cout << "[NodeList] Replacing nodeId: " << nodeId << " with replacementNodeId " << replacementNodeId << std:: endl;
+        std::cout << "[ NodeList ] Replacing nodeId: " << nodeId << " with replacementNodeId " << replacementNodeId << std:: endl;
         copyNodeInformation(node, replacementNode);
         resetNode(node);
         updatePosition();
     } else if (node != nullptr) {
-        std::cout << "[NodeList] Deleting nodeId: " << nodeId << std:: endl;
+        std::cout << "[ NodeList ] Deleting nodeId: " << nodeId << std:: endl;
         meshNetwork.removeNode(node);
+        if (node->getXPosition() > 0) {
+            insertRight = true;
+        } else {
+            insertRight = false;
+        }
         resetNode(node);
         updatePosition();
     } else {
-        std::cerr << "[NodeList] One or both node ids does not exist in the register" << std::endl;
+        std::cerr << "[ ERROR ] One or both node ids does not exist in the register" << std::endl;
     }
 }
 
@@ -182,14 +188,16 @@ bool NodeList::isNodeInMesh(const int nodeId) {
     return isNode(nodeId, true);
 }
 
+bool NodeList::isMeshEmpty() {
+    return getNodesWithPriority(Priority::NONE).size() == nodes.size();
+}
+
 Node* NodeList::getConnectedInnerNode(Node* node) {
     if(node->getXPosition() == 0) {
         return nullptr;
     } else if (node->getXPosition() > 0) {
-        std::cout << "[NodeList] The connected inner node for nodeId " << node->getNodeId() << " is nodeId " << node->prev->getNodeId() << std::endl;
         return node->prev;
     }
-    std::cout << "[NodeList] The connected inner node for nodeId " << node->getNodeId() << " is nodeId " <<  node->next->getNodeId() << std::endl;
     return node->next;
 }
 

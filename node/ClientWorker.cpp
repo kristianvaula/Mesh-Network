@@ -150,7 +150,7 @@ int ClientWorker::Connect() {
     return 1; 
   }
 
-  std::cout << "[Error] Connected to server: " << serverPort << std::endl; 
+  std::cout << "[ Node ] Connected to server: " << serverPort << std::endl; 
   
   if (SendHello() != 0) {
     close(socket_); 

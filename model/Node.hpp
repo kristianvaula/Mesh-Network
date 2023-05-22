@@ -5,6 +5,8 @@
 #ifndef MESH_NETWORK_NODE_HPP
 #define MESH_NETWORK_NODE_HPP
 
+#include <string.h>
+
 #include "enums/Priority.hpp"
 #include "dto/SocketData.hpp"
 
@@ -18,8 +20,8 @@ private:
     Priority priority;
 
 public:
-    Node* prev;
-    Node* next;
+    Node* prev = nullptr;
+    Node* next = nullptr;
 
     Node();
     Node(int nodeId, int port, std::string ipAddress);
@@ -35,6 +37,7 @@ public:
     int getYPosition() const;
     void setYPosition(int y);
     Priority getPriority() const;
+    std::string getPriorityName();
     void setPriority(Priority p);
 };
 

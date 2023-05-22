@@ -27,11 +27,9 @@ void DoubleLinkedList::removeNode(Node* node) {
 
     if (node == head) {
         head = node->next;
-        //node->next->prev = nullptr;
     }
     if (node == tail) {
         tail = node->prev;
-        //node->prev->next = nullptr;
     }
     if (node->prev != nullptr) {
         node->prev->next = node->next;
@@ -39,7 +37,6 @@ void DoubleLinkedList::removeNode(Node* node) {
     if (node->next != nullptr) {
         node->next->prev = node->prev;
     }
-
 
     node->prev = nullptr;
     node->next = nullptr;
@@ -71,4 +68,8 @@ void DoubleLinkedList::replaceNode(Node* node, Node* replacementNode) {
 
     node->prev = nullptr;
     node->next = nullptr;
+}
+
+Node* DoubleLinkedList::getHead() {
+    return head;
 }
