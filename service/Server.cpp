@@ -21,10 +21,8 @@
 
 /*
     TODO:
-    - Sjekke close_socket
+    - Sjekke close_socket: the server socket is never terminated
     - sjekke joining
-    - implement method to close connection with a node. The close will happen on request from the node
-    - the server socket is never terminated
 */
 class Server {
 private:
