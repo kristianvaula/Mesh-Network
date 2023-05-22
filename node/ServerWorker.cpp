@@ -189,8 +189,8 @@ int ServerWorker::HandleReplaceSelf(int port, int pos) {
     //Send request
     if ((bytesSent = send(clientSocket, &nodeData, sizeof(nodeData), 0)) <= 0) {
       std::cerr << "[Error] Send failed, removing client" << std::endl; 
-      close(clientSocket); 
       connectedClientSockets_.erase(clientSocket); 
+      close(clientSocket); 
       continue; 
     }
     nodeData = { 0 }; 

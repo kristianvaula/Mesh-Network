@@ -60,7 +60,7 @@ void ClientWorker::RunClient(const std::string& serverPort) {
       }
     }
     else if (bytesRead == 0) {
-      std::cout << "[ Node ] Receiveed empty server message" << std::endl;
+      std::cout << "[ Node ] Received empty server message" << std::endl;
       break;  
     }
   }
