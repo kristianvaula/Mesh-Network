@@ -143,68 +143,80 @@ private:
         int valread;
         char buffer[1024] = { 0 };
         bool clientConnection = true;
-        char x;
         std::string hello = "Hello from server";
+        
         send(new_socket, hello.c_str(), hello.length(), 0);
         valread = read(new_socket, buffer, sizeof(buffer));
         printf("%s\n", buffer);
 
         while (clientConnection) {
             NodeData nodeData = {0};
-            long client_data = recv(new_socket, &nodeData, sizeof(nodeData), 0);
+            valread = recv(new_socket, &nodeData, sizeof(nodeData), 0);
 
-            if (client_data <= 0) {
+            if (valread <= 0) {
                 clientConnection = false;
                 std::cout << "[Server: clientThread] Closing client conection" << std::endl;
                 close(new_socket);
-            } else {
-                std::cout << "[Server: clientThread] Recieve a message from client" << std::endl;
-                std::cout << "[Server: clientThread] droneId: " << nodeData.nodeId << ", port: " << nodeData.port << ", ipAddress: " << nodeData.ipAddress
-                << ", action: " << nodeData.action << std::endl;
-                if (actionFromString(nodeData.action) == ActionType::HELLO) {
-                    if (!nodeList.isNodeInList(nodeData.nodeId)) { 
-                        Node node(nodeData);
-                        {//aquire lock
-                            std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                            if (!nodeList.isMeshFull()) {
-                                nodeList.addNodeToMesh(node);
-                            } else {
-                                nodeList.addNode(node);
-                            }
-                        }//release lock
-                        Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
-                        if (nodeListItem->getPriority() != Priority::NONE) {
-                            NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
-                            send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
-                        }
-                    } else {
+                return;
+            } 
+            
+            std::cout << "[Server: clientThread] Recieve a message from client" << std::endl;
+            std::cout << "[Server: clientThread] droneId: " << nodeData.nodeId << ", port: " << nodeData.port << ", ipAddress: " << nodeData.ipAddress
+            << ", action: " << nodeData.action << std::endl;
+            
+            ActionType action = actionFromString(nodeData.action);
+            switch(action) {
+                case ActionType::HELLO: {
+                    if (nodeList.isNodeInList(nodeData.nodeId)) {
                         std::cerr << "[Server: clientThread] The nodeId: " << nodeData.nodeId << " is already registered" << std::endl;
+                        break;
                     }
-                } else if (actionFromString(nodeData.action) == ActionType::REPLACE) {
+
+                    Node node(nodeData);
+                    {//aquire lock
+                        std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                        if (!nodeList.isMeshFull()) {
+                            nodeList.addNodeToMesh(node);
+                        } else {
+                            nodeList.addNode(node);
+                        }
+                    }//release lock
+
+                    Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
+                    if (nodeListItem->getPriority() != Priority::NONE) {
+                        NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
+                        send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
+                    }
+                    break;
+                }
+                case ActionType::REPLACE: {
                     std::string action = std::string(nodeData.action);
                     size_t underscorePos = action.find('_'); 
-                    int replacementNodeId; 
-                    if (underscorePos != std::string::npos) {
-                        std::string arg = action.substr(underscorePos+1); 
-                        std::cout << "Arg: " << arg << std::endl; 
-                        try{
-                            replacementNodeId = std::stoi(arg); 
-                            {//aquire lock
-                                std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                                nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
-                            }//release lock
-                        }
-                        catch(std::invalid_argument e){
-                            std::cerr << "[Server: clientThread] Received invalid positon" << std::endl; 
-                        }
-                        catch(std::out_of_range e){
-                            std::cerr << "[Server: clientThread] Received invalid positon" << std::endl;
-                        }
+                    if (underscorePos == std::string::npos) {
+                        break;
                     }
+                    std::string arg = action.substr(underscorePos+1); 
+                    std::cout << "Arg: " << arg << std::endl; 
+                    try{
+                        int replacementNodeId = std::stoi(arg); 
+                        {//aquire lock
+                            std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                            nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
+                        }//release lock
+                    }
+                    catch(std::invalid_argument e){
+                        std::cerr << "[Server: clientThread] Received invalid positon" << std::endl; 
+                    }
+                    catch(std::out_of_range e){
+                        std::cerr << "[Server: clientThread] Received invalid positon" << std::endl;
+                    }
+                    break;
                 }
+                default:
+                    break;
             }
-        }          
-    }
+        }
+    }          
 
     void removeNode(int nodeId) {
         int masterNode_socket = nodeList.getSocketToMasterNode();
