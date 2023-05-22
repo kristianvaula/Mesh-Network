@@ -43,7 +43,7 @@ void Node::StopClient() {
     if(clientThread_.joinable()) {
       clientThread_.join(); 
     }
-    clientRunning_ = false; 
+    std::cout << "[Node] Client joined." << std::endl;
   }
 }
 
@@ -59,12 +59,10 @@ void Node::StopServer() {
 
 void Node::ServerThreadMethod(const std::string &serverPort) {
   serverWorker_.RunServer(serverPort); 
-  serverRunning_ = false; 
 }
 
 void Node::ClientThreadMethod(const std::string &serverPort) {
   clientWorker_.RunClient(serverPort); 
-  clientRunning_ = false; 
 }
 
 bool Node::IsClientRunning() const {
@@ -90,7 +88,8 @@ int main(int argc, char* argv[]) {
 
   Node node(id, port, &instructionSucceeded, messageQueue, &messageMutex,&cv); 
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000)); 
+  //Delay to ensure server print status before menu
+  std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
   while(true) {
     std::cout << "1. Connect client" << std::endl;
     std::cout << "2. Exit" << std::endl; 
@@ -112,5 +111,6 @@ int main(int argc, char* argv[]) {
       std::cout << "Invalid choice. Please try again." << std::endl;
     }
   }
+  std::cout << "[Node] Shutting down" << std::endl;
   return 0; 
 }
