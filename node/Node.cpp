@@ -66,11 +66,11 @@ void Node::ClientThreadMethod(const std::string &serverPort) {
 }
 
 bool Node::IsClientRunning() const {
-  return clientRunning_;
+  return clientRunning_.load();
 }
 
 bool Node::IsServerRunning() const {
-  return serverRunning_;
+  return serverRunning_.load();
 }
 
 int main(int argc, char* argv[]) {

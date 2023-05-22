@@ -165,7 +165,7 @@ int ClientWorker::HandleMoveTo(NodeData& nodeData) {
   int newPort = nodeData.port; 
   std::string action = nodeData.action; 
   //Fetch the destination
-  size_t underscorePos = action.find('_'); 
+  size_t underscorePos = action.rfind('_'); 
   int destination = 0; 
   if (underscorePos != std::string::npos) {
     std::string arg = action.substr(underscorePos+1); 
@@ -192,6 +192,8 @@ int ClientWorker::HandleMoveTo(NodeData& nodeData) {
     std::cerr << "[ClientWorker] Received invalid port" << std::endl;
     return 1;  
   }
+
+
 
   SendOK();
   SimulateMovement(destination); 
@@ -220,7 +222,6 @@ int ClientWorker::HandleRemoveNode(NodeData& argData) {
   }
 
   NodeData nodeData = { 0 }; 
-
 
   std::stringstream ss; 
   ss << actionToString(ActionType::REPLACE_SELF) << "_" << xPosition_->load();  

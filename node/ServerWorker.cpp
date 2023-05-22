@@ -98,7 +98,7 @@ void ServerWorker::HandleInstructions() {
       if (message.nodeId == nodeId_->load() && actionFromString(message.action) == ActionType::REPLACE_SELF){ // Check if message is intended for itself
         int destination = 0; 
         std::string action = message.action; 
-        size_t underscorePos = action.find('_'); 
+        size_t underscorePos = action.rfind('_'); 
         if (underscorePos != std::string::npos) {
           std::string arg = action.substr(underscorePos+1); 
           try{
