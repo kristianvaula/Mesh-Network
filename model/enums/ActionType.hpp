@@ -10,7 +10,8 @@ enum class ActionType {
     MOVETO,
     HELLO,
     REPLACE,
-    NONE
+    NONE, 
+    REPLACE_SELF
 };
 
 extern std::map<ActionType, std::string> actionTypeToString;

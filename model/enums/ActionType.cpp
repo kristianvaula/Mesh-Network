@@ -6,7 +6,8 @@ std::map<ActionType, std::string> actionTypeToString{
     {ActionType::MOVETO, "MOVETO"},
     {ActionType::HELLO, "HELLO"},
     {ActionType::REPLACE, "REPLACE"},
-    {ActionType::NONE, "NONE"}
+    {ActionType::NONE, "NONE"},
+    {ActionType::REPLACE_SELF, "REPLACE_SELF"}
 };
 
 ActionType actionFromString(const std::string& str) {
