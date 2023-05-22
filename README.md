@@ -84,7 +84,8 @@ Ved fremtidig arbeid er det mulig å ta for seg følgende punkter for å imøtek
 
 ### Node
 1. Kompiler serveren og tilhørende filer. Dersom du har g++ kompilatoren installert, kan du fra rotkatalogen bruke kommandoen:
-`g++ -o Node Node.cpp Worker.cpp ClientWorker.cpp ServerWorker.cpp ../model/enums/ActionType.cpp  -pthread`
+`g++ -o Node node/Node.cpp node/Worker.cpp node/ClientWorker.cpp node/ServerWorker.c
+pp model/enums/ActionType.cpp  -pthread`
 
 2.	For å kjøre den kompilerte serveren: `./Node`
 
