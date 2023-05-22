@@ -69,7 +69,7 @@ For å kjøre programmet er det nødvendig å kjøre det i en Linux terminal. De
 2.	Kjør serveren. Hvis du brukte kommandoen ovenfor for kompilering, kan du gjøre følgende: `./Server`
 
 ### Klient
-
+`g++ -o Node Node.cpp Worker.cpp ClientWorker.cpp ServerWorker.cpp ../model/enums/ActionType.cpp  -pthread`
 
 ## Instruksjoner for å bruke løsningen
 
