@@ -175,13 +175,21 @@ void NodeList::replaceNode(const int nodeId, const int replacementNodeId) {
     }
 }
 
-bool NodeList::isNodeInMesh(const int nodeId) {
+bool NodeList::isNode(const int nodeId, bool inMesh) {
     auto iterator = nodes.find(nodeId);
     if (iterator != nodes.end()) {
         Node* nodeInNodeList = iterator->second;
-        return nodeInNodeList->getPriority() != Priority::NONE;
+        return inMesh ? nodeInNodeList->getPriority() != Priority::NONE : true;
     }
     return false;
+}
+
+bool NodeList::isNodeInList(const int nodeId) {
+    return isNode(nodeId, false);
+}
+
+bool NodeList::isNodeInMesh(const int nodeId) {
+    return isNode(nodeId, true);
 }
 
 Node* NodeList::getConnectedInnerNode(Node* node) {

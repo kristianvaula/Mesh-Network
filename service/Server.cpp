@@ -17,14 +17,14 @@
 #include "../model/NodeList.hpp"
 #include "IpUtils.hpp"
 
-#define PORT 1085
+#define PORT 1087
 
 /*
     TODO:
     - Sjekke close_socket
     - sjekke joining
-    - sjekke inifinte prining når en client avsluttes
     - implement method to close connection with a node. The close will happen on request from the node
+    - the server socket is never terminated
 */
 class Server {
 private:
@@ -140,6 +140,7 @@ private:
         return nodeData;
     }
 
+    //TODO: reduce nested if statements
     void handleConnection(int new_socket) {
         int valread;
         char buffer[1024] = { 0 };
@@ -163,19 +164,23 @@ private:
                 std::cout << "[Server: clientThread] droneId: " << nodeData.nodeId << ", port: " << nodeData.port << ", ipAddress: " << nodeData.ipAddress
                 << ", action: " << nodeData.action << std::endl;
                 if (actionFromString(nodeData.action) == ActionType::HELLO) {
-                    Node node(nodeData);
-                    {//aquire lock
-                        std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                        if (!nodeList.isMeshFull()) {
-                            nodeList.addNodeToMesh(node);
-                        } else {
-                            nodeList.addNode(node);
+                    if (!nodeList.isNodeInList(nodeData.nodeId)) { 
+                        Node node(nodeData);
+                        {//aquire lock
+                            std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                            if (!nodeList.isMeshFull()) {
+                                nodeList.addNodeToMesh(node);
+                            } else {
+                                nodeList.addNode(node);
+                            }
+                        }//release lock
+                        Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
+                        if (nodeListItem->getPriority() != Priority::NONE) {
+                            NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
+                            send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
                         }
-                    }//release lock
-                    Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
-                    if (nodeListItem->getPriority() != Priority::NONE) {
-                        NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
-                        send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
+                    } else {
+                        std::cerr << "[Server: clientThread] The nodeId: " << nodeData.nodeId << " is already registered" << std::endl;
                     }
                 } else if (actionFromString(nodeData.action) == ActionType::REPLACE) {
                     std::string action = std::string(nodeData.action);

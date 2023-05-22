@@ -23,6 +23,12 @@ private:
     void toString(Node*);
     void updatePosition();
     Node* getHighPriority();
+    /*
+    * Check if node is in NodeList or MeshNetwork
+    * If bool is false then it is controlled if the nodeId is in NodeList.
+    * If bool is true then it is controlled if the nodeId is in MeshNetwork.
+    */
+    bool isNode(const int, bool);
 
 public:
     NodeList(int meshSize);
@@ -39,6 +45,7 @@ public:
     Node* addNodeToMesh(Node&);
     void replaceNode(const int, const int);
     bool isNodeInMesh(const int);
+    bool isNodeInList(const int);
     std::unordered_map<int, Node*> getNodesWithPriority(Priority);
 
     /*
