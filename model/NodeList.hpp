@@ -18,11 +18,17 @@ private:
     bool insertRight = false;
     int meshSize;
     int socketToMasterNode = -1;
-    void resetNode(Node*);//new method
-    void copyNodeInformation(Node*, Node*);//new method
-    void toString(Node*);//new method
-    void updatePosition();//new method
-    Node* getHighPriority();//new method
+    void resetNode(Node*);
+    void copyNodeInformation(Node*, Node*);
+    void toString(Node*);
+    void updatePosition();
+    Node* getHighPriority();
+    /*
+    * Check if node is in NodeList or MeshNetwork
+    * If bool is false then it is controlled if the nodeId is in NodeList.
+    * If bool is true then it is controlled if the nodeId is in MeshNetwork.
+    */
+    bool isNode(const int, bool);
 
 public:
     NodeList(int meshSize);
@@ -30,15 +36,15 @@ public:
     Node* addNode(const Node&);
     Node* addNode(const NodeData&);
     Node* getNode(const int);
-    //void editNode(Node*);
     int getSize() const;
 
     void setSocketToMasterNode(const int);
     int getSocketToMasterNode() const;
     void setPriority(Node*);
     Node* addNodeToMesh(Node&);
-    void replaceNode(const int, const int);//new method
+    void replaceNode(const int, const int);
     bool isNodeInMesh(const int);
+    bool isNodeInList(const int);
     std::unordered_map<int, Node*> getNodesWithPriority(Priority);
 
     /*

@@ -17,14 +17,14 @@
 #include "../model/NodeList.hpp"
 #include "IpUtils.hpp"
 
-#define PORT 1084
+#define PORT 1088
 
 /*
     TODO:
     - Sjekke close_socket
     - sjekke joining
-    - sjekke inifinte prining når en client avsluttes
     - implement method to close connection with a node. The close will happen on request from the node
+    - the server socket is never terminated
 */
 class Server {
 private:
@@ -65,7 +65,6 @@ public:
 
 private:
     void createSocket() {
-        // Creating socket file descriptor
         if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
             perror("socket failed");
             exit(EXIT_FAILURE);
@@ -78,7 +77,6 @@ private:
         address.sin_addr.s_addr = INADDR_ANY;
         address.sin_port = htons(PORT);
 
-        // Forcefully attaching socket to the port
         if (bind(server_fd, (struct sockaddr*)&address, sizeof(address)) < 0) {
             perror("bind failed");
             exit(EXIT_FAILURE);
@@ -93,9 +91,9 @@ private:
     }
 
     void displayMenu() {
-        std::cout << "Server is running on port: " << PORT << std::endl
-            << "Press 'q' if you want the server to terminate" << std::endl
-            << "Press 'r' if you want to remove a node from the mesh network" << std::endl;
+        std::cout << "[Server] Server is running on port: " << PORT << std::endl
+            << "[Server] Press 'q' if you want the server to terminate" << std::endl
+            << "[Server] Press 'r' if you want to remove a node from the mesh network" << std::endl;
     }
 
     void handleServerInput() {
@@ -110,9 +108,9 @@ private:
                 stop();
             } else if (x == 'r') {
                 int nodeId;
-                std::cout << "Type in the nodeId to the node you want to remove" << std::endl;
+                std::cout << "[Server] Type in the nodeId to the node you want to remove" << std::endl;
                 std::cin >> nodeId;
-                std::cout << "Recived request to remove nodeId: " << nodeId << std::endl;
+                std::cout << "[Server] Recived request to remove nodeId: " << nodeId << std::endl;
                 removeNode(nodeId);
             }
         }
@@ -135,13 +133,14 @@ private:
         char action[256];
         strcpy(action, "MOVETO_");
         strcat(action, std::to_string(node->getXPosition()).c_str());
+        strcpy(nodeData.action, action);
         if(node->getPriority() == Priority::HIGH) {                            
             nodeList.setSocketToMasterNode(new_socket);
         }
-        strcpy(nodeData.action, action);
         return nodeData;
     }
 
+    //TODO: reduce nested if statements
     void handleConnection(int new_socket) {
         int valread;
         char buffer[1024] = { 0 };
@@ -158,35 +157,52 @@ private:
 
             if (client_data <= 0) {
                 clientConnection = false;
-                std::cout << "Closing client conection" << std::endl;
+                std::cout << "[Server: clientThread] Closing client conection" << std::endl;
                 close(new_socket);
             } else {
-                std::cout << "droneId: " << nodeData.nodeId << std::endl
-                << "port: " << nodeData.port << std::endl
-                << "ipAddress: " << nodeData.ipAddress << std::endl
-                << "action: " << nodeData.action << std::endl;
+                std::cout << "[Server: clientThread] Recieve a message from client" << std::endl;
+                std::cout << "[Server: clientThread] droneId: " << nodeData.nodeId << ", port: " << nodeData.port << ", ipAddress: " << nodeData.ipAddress
+                << ", action: " << nodeData.action << std::endl;
                 if (actionFromString(nodeData.action) == ActionType::HELLO) {
-                    Node node(nodeData);
-                    {//aquire lock
-                        std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                        if (!nodeList.isMeshFull()) {
-                            nodeList.addNodeToMesh(node);
-                        } else {
-                            nodeList.addNode(node);
+                    if (!nodeList.isNodeInList(nodeData.nodeId)) { 
+                        Node node(nodeData);
+                        {//aquire lock
+                            std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                            if (!nodeList.isMeshFull()) {
+                                nodeList.addNodeToMesh(node);
+                            } else {
+                                nodeList.addNode(node);
+                            }
+                        }//release lock
+                        Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
+                        if (nodeListItem->getPriority() != Priority::NONE) {
+                            NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
+                            send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
                         }
-                    }//release lock
-                    Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
-                    if (nodeListItem->getPriority() != Priority::NONE) {
-                        NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
-                        send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
+                    } else {
+                        std::cerr << "[Server: clientThread] The nodeId: " << nodeData.nodeId << " is already registered" << std::endl;
                     }
                 } else if (actionFromString(nodeData.action) == ActionType::REPLACE) {
                     std::string action = std::string(nodeData.action);
-                    int replacementNodeId = std::stoi(action.substr(8));
-                    {//aquire lock
-                        std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                        nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
-                    }//release lock
+                    size_t underscorePos = action.find('_'); 
+                    int replacementNodeId; 
+                    if (underscorePos != std::string::npos) {
+                        std::string arg = action.substr(underscorePos+1); 
+                        std::cout << "Arg: " << arg << std::endl; 
+                        try{
+                            replacementNodeId = std::stoi(arg); 
+                            {//aquire lock
+                                std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                                nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
+                            }//release lock
+                        }
+                        catch(std::invalid_argument e){
+                            std::cerr << "[Server: clientThread] Received invalid positon" << std::endl; 
+                        }
+                        catch(std::out_of_range e){
+                            std::cerr << "[Server: clientThread] Received invalid positon" << std::endl;
+                        }
+                    }
                 }
             }
         }          
@@ -194,7 +210,7 @@ private:
 
     void removeNode(int nodeId) {
         int masterNode_socket = nodeList.getSocketToMasterNode();
-        std::cout << "masterNode_socket: " << masterNode_socket << std::endl;
+        std::cout << "[Server] masterNode_socket: " << masterNode_socket << std::endl;
         if (masterNode_socket != -1 && nodeList.isNodeInMesh(nodeId)) {
             NodeData nodeData = {0};
             nodeData.nodeId = nodeId;
@@ -203,22 +219,20 @@ private:
             ipUtils.getIPAddress(ipAddress, sizeof(ipAddress));
             strcpy(nodeData.ipAddress, ipAddress);
             strcpy(nodeData.action, "REMOVE_NODE");
-            std::cout << "REMOVE NODE" << std::endl;
-            std::cout << "droneId: " << nodeData.nodeId << std::endl
-                << "port: " << nodeData.port << std::endl
-                << "ipAddress: " << nodeData.ipAddress << std::endl
-                << "action: " << nodeData.action << std::endl;
+            std::cout << "[Server] droneId: " << nodeData.nodeId << ", port: " << nodeData.port << ", ipAddress: " << nodeData.ipAddress
+                << ", action: " << nodeData.action << std::endl;
             send(masterNode_socket, &nodeData, sizeof(nodeData), 0);
+        } else {
+            std::cerr << "[Server] Could not remove node. Please control if the node is in the mesh network and that the master node socket is stored" << std::endl;
         }
     }
 
     void handleConnections() {
         struct sockaddr_in address;
         int addrlen = sizeof(address);
+        int new_socket;
 
         while (run) {
-            int new_socket;
-            char x;
             if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
                 perror("new connection failed");
                 exit(EXIT_FAILURE);
