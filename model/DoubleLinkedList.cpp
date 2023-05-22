@@ -25,6 +25,14 @@ void DoubleLinkedList::insertEnd(Node* node) {
 void DoubleLinkedList::removeNode(Node* node) {
     if (node == nullptr || head == nullptr || tail == nullptr) return;
 
+    if (node == head) {
+        head = node->next;
+        //node->next->prev = nullptr;
+    }
+    if (node == tail) {
+        tail = node->prev;
+        //node->prev->next = nullptr;
+    }
     if (node->prev != nullptr) {
         node->prev->next = node->next;
     }
@@ -32,12 +40,6 @@ void DoubleLinkedList::removeNode(Node* node) {
         node->next->prev = node->prev;
     }
 
-    if (node == head) {
-        head = node->next;
-    }
-    if (node == tail) {
-        tail = node->prev;
-    }
 
     node->prev = nullptr;
     node->next = nullptr;

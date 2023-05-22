@@ -22,7 +22,7 @@
 #include "../model/NodeList.hpp"
 #include "IpUtils.hpp"
 
-#define PORT 8084
+#define PORT 8086
 
 class Server {
 private:

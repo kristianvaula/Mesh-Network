@@ -157,6 +157,7 @@ void NodeList::replaceNode(const int nodeId, const int replacementNodeId) {
         updatePosition();
     } else if (node != nullptr) {
         std::cout << "[NodeList] Deleting nodeId: " << nodeId << std:: endl;
+        meshNetwork.removeNode(node);
         resetNode(node);
         updatePosition();
     } else {
