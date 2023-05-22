@@ -155,6 +155,10 @@ void NodeList::replaceNode(const int nodeId, const int replacementNodeId) {
         copyNodeInformation(node, replacementNode);
         resetNode(node);
         updatePosition();
+    } else if (node != nullptr) {
+        std::cout << "[NodeList] Deleting nodeId: " << nodeId << std:: endl;
+        resetNode(node);
+        updatePosition();
     } else {
         std::cerr << "[NodeList] One or both node ids does not exist in the register" << std::endl;
     }

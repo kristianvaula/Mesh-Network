@@ -10,13 +10,13 @@ private:
     Node* head;
     Node* tail;
 
-    void removeNode(Node*);
 
 public:
     DoubleLinkedList();
     void insertFront(Node*);
     void insertEnd(Node*);
     void replaceNode(Node*, Node*);
+    void removeNode(Node*);
 };
 
 #endif //MESH_NETWORK_DOUBLE_LINKED_LIST_HPP
