@@ -33,15 +33,13 @@ void ClientWorker::RunClient(const std::string& serverPort) {
     int selectResult = select(socket_+1, &readfds, nullptr, nullptr, &timeout); 
   
     if (selectResult == -1) {
-      std::cerr << "[HandlerThread] Error in select" << std::endl;
+      std::cerr << "[ClientWorker] Error in select" << std::endl;
       close(socket_);
       return;
     }
 
-    if (selectResult == 0) {
-      std::cout << "[HandlerThread] Receive timeout" << std::endl;
-      close(socket_);
-      return;
+    else if (selectResult == 0) {
+      continue;
     }
 
     //Read nodeData
@@ -58,13 +56,14 @@ void ClientWorker::RunClient(const std::string& serverPort) {
         HandleAction(nodeData); 
       }
     }
-    else {
-      std::cout << "[ClientWorker] Receiveed empty server message, closing socket" << std::endl;
-      close(socket_); 
+    else if (bytesRead == 0) {
+      std::cout << "[ClientWorker] Receiveed empty server message" << std::endl;
       break;  
     }
   }
+
   close(socket_);  
+  std::cout << "[ClientWorker] Client closed" << std::endl; 
 }
 
 void ClientWorker::HandleAction(NodeData& nodeData) {
@@ -233,7 +232,7 @@ int ClientWorker::HandleRemoveNode(NodeData& argData) {
     const std::chrono::milliseconds timeout(5000); 
     auto deadline = std::chrono::steady_clock::now() + timeout; 
     std::unique_lock<std::mutex> lock(*messageMutex_); 
-    while (!instructionSucceeded_->load()){
+    while (!instructionSucceeded_->load() && running_->load()){
       if (cv_->wait_until(lock, deadline) == std::cv_status::timeout) {
         std::cerr << "[ClientWorker] Remove node failure: Timed out." << std::endl;
         return 1; 
