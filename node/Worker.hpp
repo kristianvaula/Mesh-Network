@@ -11,6 +11,7 @@
 #include <cstring> 
 #include <limits>
 #include <queue>
+#include <vector> 
 #include <chrono>
 
 #include <sys/socket.h>
@@ -30,7 +31,7 @@ typedef std::uint16_t porttype;
 
 class Worker {
   public: 
-    Worker(int* nodeId, int* port, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
+    Worker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* instructionSucceeded, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
     virtual ~Worker(); 
 
     void EnqueueInstruction(const NodeData& message); 
@@ -38,13 +39,15 @@ class Worker {
     void Stop(); 
 
   protected: 
-    int* nodeId_; 
-    int* port_;
     int socket_; 
-    porttype serverPort_; 
+    std::atomic<porttype> serverPort_; 
     std::mutex workerMutex_; 
     std::atomic<bool> running_; 
 
+    std::atomic<int>* nodeId_; 
+    std::atomic<porttype>* port_;
+
+    std::atomic<bool>* instructionSucceeded_; 
     std::queue<NodeData>& messageQueue_; 
     std::mutex* messageMutex_; 
     std::condition_variable* cv_; 

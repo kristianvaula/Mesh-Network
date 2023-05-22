@@ -1,7 +1,7 @@
 #include "ClientWorker.hpp"
 
-ClientWorker::ClientWorker(int* nodeId, int* port, std::atomic<int>* xPosition, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
-: xPosition_(xPosition), Worker(nodeId, port, messageQueue, messageMutex,cv){
+ClientWorker::ClientWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<int>* xPosition, std::atomic<bool>* instructionSucceeded,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+: xPosition_(xPosition), Worker(nodeId, port, instructionSucceeded, messageQueue, messageMutex,cv){
 }
 
 ClientWorker::~ClientWorker() {}
@@ -14,10 +14,6 @@ void ClientWorker::RunClient(const std::string& serverPort) {
     return; 
   }
 
-  if (SendHello() != 0) {
-    return; 
-  } 
-
   NodeData nodeData = { 0 }; 
   int bytesRead; 
   bool passthrough; 
@@ -25,7 +21,6 @@ void ClientWorker::RunClient(const std::string& serverPort) {
   while (running_.load()) {
     //Read nodeData
     bytesRead = recv(socket_, &nodeData, sizeof(nodeData), 0); 
-
     if(bytesRead > 0) {
       //Check if intended for this node
       passthrough = IsPassthrough(nodeData.nodeId); 
@@ -49,19 +44,21 @@ void ClientWorker::RunClient(const std::string& serverPort) {
 
 void ClientWorker::HandleAction(NodeData& nodeData) {
   ActionType action = actionFromString(nodeData.action); 
+
   switch (action) {
     case (ActionType::HELLO): // Hello 
       std::cout << "[Server] Hello" << std::endl; 
       break; 
     case (ActionType::MOVETO):// Move to <x> command 
       std::cout << "[Server] Move To" << std::endl;
-      HandleMoveTo(nodeData); 
+      if (HandleMoveTo(nodeData) != 0){
+        SendNone(); 
+      } 
       break; 
     case (ActionType::REMOVE_NODE): 
       std::cout << "[Server] Remove Node" << std::endl;
-      SendOK(); 
+      HandleRemoveNode(nodeData); 
       break; 
-
     case (ActionType::REPLACE): 
       std::cout << "[Server] Replace" << std::endl;
       SendOK(); 
@@ -82,16 +79,15 @@ void ClientWorker::SimulateMovement(int pos) {
     std::cout << "."; 
   }
   std::cout << std::endl; 
+  xPosition_->store(pos); 
+  std::cout << "[Node] Moved Successfully " << std::endl; 
 }
 
 bool ClientWorker::IsPassthrough(int nodeId) {
   bool result = false; 
-  {
-    std::unique_lock<std::mutex> lock(workerMutex_);
-    if (nodeId != *nodeId_) {
-      result = true; 
-    } 
-  }
+  if (nodeId != nodeId_->load() && nodeId != -1) {
+    result = true; 
+  } 
   return result; 
 }
 
@@ -100,6 +96,11 @@ int ClientWorker::Connect() {
   {
     std::unique_lock<std::mutex> lock(workerMutex_); 
     serverPort = serverPort_; 
+  }
+
+  if (socket_ != -1) {
+    close(socket_);
+    socket_ = -1;
   }
 
   socket_ = socket(AF_INET, SOCK_STREAM, 0); 
@@ -125,7 +126,12 @@ int ClientWorker::Connect() {
     return 1; 
   }
 
-  std::cout << "[ClientWorker] Connected to server" << std::endl; 
+  std::cout << "[ClientWorker] Connected to server: " << serverPort << std::endl; 
+  
+  if (SendHello() != 0) {
+    close(socket_); 
+    return 1; 
+  }
   return 0; 
 } 
 
@@ -134,13 +140,11 @@ int ClientWorker::HandleMoveTo(NodeData& nodeData) {
   char* ip = nodeData.ipAddress; 
   int newPort = nodeData.port; 
   std::string action = nodeData.action; 
-  std::cout << "Action: " << action << std::endl; 
   //Fetch the destination
   size_t underscorePos = action.find('_'); 
   int destination; 
   if (underscorePos != std::string::npos) {
     std::string arg = action.substr(underscorePos+1); 
-    std::cout << "Arg: " << arg << std::endl; 
 
     try{
       destination = std::stoi(arg); 
@@ -166,15 +170,64 @@ int ClientWorker::HandleMoveTo(NodeData& nodeData) {
   }
 
   SendOK();
-  close(socket_); 
-
-  //Simulate movement 
   SimulateMovement(destination); 
-  {
-    std::unique_lock<std::mutex> lock(workerMutex_); 
-    xPosition_->store(destination); 
-    serverPort_ = port; 
+
+  if(serverPort_.load() != port) {
+    serverPort_.store(port); 
+    if (Connect() != 0) {
+      return 1; 
+    }
   }
+
+  return 0; 
+}
+
+int ClientWorker::HandleRemoveNode(NodeData& argData) {
+  char* ip = argData.ipAddress; 
+  int newPort = argData.port; 
+
+  porttype port; 
+  if(newPort >= 0 && newPort <= std::numeric_limits<porttype>::max()) {
+    port = static_cast<porttype>(newPort); 
+  }
+  else {
+    std::cerr << "[ClientWorker] Received invalid port" << std::endl;
+    return 1;  
+  }
+
+  NodeData nodeData = { 0 }; 
+
+  std::string action = actionToString(ActionType::REPLACE_SELF); 
+  strcpy(nodeData.action, action.c_str()); 
+  nodeData.nodeId = nodeId_->load();
+  nodeData.port = serverPort_.load(); 
+
+  EnqueueInstruction(nodeData); 
+
+  {
+    const std::chrono::milliseconds timeout(5000); 
+    auto deadline = std::chrono::steady_clock::now() + timeout; 
+    std::unique_lock<std::mutex> lock(*messageMutex_); 
+    while (!instructionSucceeded_->load()){
+      if (cv_->wait_until(lock, deadline) == std::cv_status::timeout) {
+        std::cerr << "[ClientWorker] Remove node failure: Timed out." << std::endl;
+        return 1; 
+      }
+    }
+  }
+  
+  if (!instructionSucceeded_->load()) {
+    std::cerr << "[ClientWorker] Remove node failure: Could not find replacement" << std::endl;
+    return 1; 
+  }
+
+  instructionSucceeded_->store(false);
+
+  SimulateMovement(0); 
+
+  xPosition_->store(0); 
+  serverPort_.store(port); 
+
   if (Connect() != 0) {
     return 1; 
   }
@@ -185,11 +238,9 @@ int ClientWorker::SendResponse(ActionType actionType) {
   NodeData nodeData = { 0 };
   std::string actionStr = actionToString(actionType);
   strcpy(nodeData.action, actionStr.c_str());
-  {
-    std::unique_lock<std::mutex> lock(workerMutex_);
-    nodeData.nodeId = *nodeId_;
-    nodeData.port = *port_;
-  }
+  nodeData.nodeId = nodeId_->load();
+  nodeData.port = port_->load();
+
   int bytesSent = send(socket_, &nodeData, sizeof(nodeData), 0);
   if (bytesSent == -1) {
     std::cerr << "[ClientWorker] Failed to send data" << std::endl;
@@ -200,6 +251,10 @@ int ClientWorker::SendResponse(ActionType actionType) {
 
 int ClientWorker::SendHello() {
   return SendResponse(ActionType::HELLO); 
+}
+
+int ClientWorker::SendNone() {
+  return SendResponse(ActionType::NONE); 
 }
 
 int ClientWorker::SendOK() {

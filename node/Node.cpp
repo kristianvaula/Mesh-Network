@@ -9,7 +9,7 @@ typedef std::uint16_t porttype;
 
 class Node {
   public: 
-    Node(int id, int port, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
+    Node(int id, porttype port, std::atomic<bool>* instructionSucceeded, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
     ~Node(); 
 
     void Stop(); 
@@ -17,12 +17,14 @@ class Node {
     void StartServer();
     void StopClient(); 
     void StopServer(); 
+    void ServerThreadMethod(const std::string &serverPort); 
+    void ClientThreadMethod(const std::string &serverPort); 
     bool IsClientRunning() const; 
     bool IsServerRunning() const; 
  
   private: 
-    int id_;
-    int port_; 
+    std::atomic<int> id_;
+    std::atomic<porttype> port_; 
     std::atomic<int> xPosition_; 
     std::thread serverThread_; 
     std::thread clientThread_; 
@@ -33,8 +35,8 @@ class Node {
 
 };
 
-Node::Node(int id, int port, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
-: id_(id), port_(port), xPosition_(0), serverWorker_(&id_, &port_, messageQueue,messageMutex,cv), clientWorker_(&id_, &port_, &xPosition_, messageQueue,messageMutex,cv), clientRunning_(false), serverRunning_(false) {
+Node::Node(int id, porttype port, std::atomic<bool>* instructionSucceeded,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+: id_(id), port_(port), xPosition_(0), serverWorker_(&id_, &port_, instructionSucceeded, messageQueue,messageMutex,cv), clientWorker_(&id_, &port_, &xPosition_, instructionSucceeded, messageQueue,messageMutex,cv), clientRunning_(false), serverRunning_(false) {
 }
 
 Node::~Node() {
@@ -48,15 +50,15 @@ void Node::Stop() {
 
 void Node::StartClient(const std::string& serverPort) {
   if(!clientRunning_) {
-    clientThread_ = std::thread(&ClientWorker::RunClient, &clientWorker_, serverPort); 
+    clientThread_ = std::thread(&Node::ClientThreadMethod, this, serverPort); 
     clientRunning_ = true; 
   }
 }
 
 void Node::StartServer() {
-  const std::string port = std::to_string(port_); 
+  const std::string port = std::to_string(port_.load()); 
   if(!serverRunning_) {
-    serverThread_ = std::thread(&ServerWorker::RunServer, &serverWorker_, port);
+    serverThread_ = std::thread(&Node::ServerThreadMethod, this, port);
     serverRunning_ = true; 
   }
 }
@@ -81,6 +83,16 @@ void Node::StopServer() {
   }
 }
 
+void Node::ServerThreadMethod(const std::string &serverPort) {
+  serverWorker_.RunServer(serverPort); 
+  serverRunning_ = false; 
+}
+
+void Node::ClientThreadMethod(const std::string &serverPort) {
+  clientWorker_.RunClient(serverPort); 
+  clientRunning_ = false; 
+}
+
 bool Node::IsClientRunning() const {
   return clientRunning_;
 }
@@ -96,13 +108,13 @@ int main(int argc, char* argv[]) {
   }
 
   int id = std::atoi(argv[1]); 
-  int port = std::atoi(argv[2]);
+  porttype port = static_cast<porttype>(std::atoi(argv[2]));
   std::queue<NodeData> messageQueue; 
   std::mutex messageMutex; 
   std::condition_variable cv; 
+  std::atomic<bool> instructionSucceeded(false); 
 
-
-  Node node(id, port, messageQueue, &messageMutex,&cv); 
+  Node node(id, port, &instructionSucceeded, messageQueue, &messageMutex,&cv); 
   node.StartServer(); 
 
   std::this_thread::sleep_for(std::chrono::milliseconds(1000)); 

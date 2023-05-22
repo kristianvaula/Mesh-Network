@@ -1,20 +1,21 @@
 #include "ServerWorker.hpp"
 
-ServerWorker::ServerWorker(int* nodeId, int* port,std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
-: Worker(nodeId, port,messageQueue, messageMutex, cv), clientSocketsMutex_(), connectedClientSockets_() {
+ServerWorker::ServerWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* instructionSucceeded, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+: Worker(nodeId, port, instructionSucceeded, messageQueue, messageMutex, cv), clientSocketsMutex_(), connectedClientSockets_() {
 }
 
 ServerWorker::~ServerWorker() {}
 
 void ServerWorker::RunServer(const std::string& serverPort) {
   running_.store(true); 
+  std::vector<std::thread> handlerThreads; 
 
   SetServerport(serverPort);  
   if (SetupServer() != 0) {
     return; 
   }
 
-  std::thread broadcastThread(&ServerWorker::BroadcastMessages, this); 
+  std::thread broadcastThread(&ServerWorker::HandleInstructions, this); 
   broadcastThread.detach(); 
 
   while (running_.load()) {
@@ -26,15 +27,21 @@ void ServerWorker::RunServer(const std::string& serverPort) {
       continue;
     }
     std::cout << "[ServerWorker] Accepted client connection" << std::endl;
-    std::thread clientThread(&ServerWorker::HandleClient,this, clientSocket);
-    clientThread.detach();
+    std::thread handlerThread(&ServerWorker::HandleClient,this, clientSocket);
+    handlerThreads.push_back(std::move(handlerThread)); 
+  }
+
+  for (auto& thread : handlerThreads) {
+    if (thread.joinable()) {
+      thread.join(); 
+    }
   }
 
   close(socket_); 
   return; 
 }
 
-void ServerWorker::BroadcastMessages() {
+void ServerWorker::HandleInstructions() {
   while (running_.load()) {
     std::queue<NodeData> messages; 
     {
@@ -51,11 +58,25 @@ void ServerWorker::BroadcastMessages() {
     while (!messages.empty()) {
       NodeData message = std::move(messages.front()); 
       messages.pop(); 
+      std::cout << 
+        "[ServerWorker] Handling message: action: " << message.action <<
+        ", nodeId: " << message.nodeId << 
+      std::endl; 
 
-      {
+      //Replace self instruction 
+      if (message.nodeId == nodeId_->load() && actionFromString(message.action) == ActionType::REPLACE_SELF){ // Check if message is intended for itself
+        if(HandleReplaceSelf(message.port) >= 0) {
+          //Set flag
+          instructionSucceeded_->store(true);
+          cv_->notify_all(); 
+        }
+      }
+      else { 
         std::unique_lock<std::mutex> lock(clientSocketsMutex_); 
+        std::cout << "[Broadcast] Broadcasting to " << connectedClientSockets_.size() << " clients." << std::endl;
         for(const auto& clientSocket : connectedClientSockets_) {
-          int bytesSent = send(clientSocket, &message, sizeof(message), 0); 
+          int bytesSent = send(clientSocket, &message, sizeof(message), 0);
+          std::cout << "[Broadcast] Message sent, length: " << bytesSent << std::endl; 
           if (bytesSent <= 0) {
             std::cerr << "[Broadcast] Failed to send message" << std::endl;
             break; 
@@ -67,10 +88,10 @@ void ServerWorker::BroadcastMessages() {
 }
 
 void ServerWorker::HandleClient(int clientSocket) {
-  //If received hello from client, add to connected list
   NodeData nodeData = { 0 }; 
+  std::cout << "[HandlerThread] Awaiting client hello " << std::endl; 
   int bytesRead = recv(clientSocket, &nodeData, sizeof(nodeData), 0); 
-  std::cout << "[ServerWorker] Bytes Received: " <<  bytesRead << std::endl; 
+  std::cout << "[HandlerThread] Bytes Received: " <<  bytesRead << std::endl; 
   if (bytesRead > 0) {
     std::cout <<  nodeData.action << std::endl; 
     if(actionFromString(nodeData.action) == ActionType::HELLO) {
@@ -83,6 +104,49 @@ void ServerWorker::HandleClient(int clientSocket) {
   }
   //Else close 
   close(clientSocket); 
+}
+
+int ServerWorker::HandleReplaceSelf(int port) {
+  int bytesSent, bytesReceived = 0; 
+  NodeData nodeData = { 0 }; 
+  nodeData.nodeId = -1; //All nodes will process this
+  std::string action = actionToString(ActionType::MOVETO); 
+  std::strcpy(nodeData.action, action.c_str()); 
+  nodeData.port = port; 
+  
+  std::unique_lock<std::mutex> lock(clientSocketsMutex_); 
+
+  //Check if need replacement 
+  if (connectedClientSockets_.size() <= 0) {
+    instructionSucceeded_->store(true); 
+    return 0; 
+  }
+
+  //Find replacement 
+  for(const auto& clientSocket : connectedClientSockets_) {
+    //Send request
+    if ((bytesSent = send(clientSocket, &nodeData, sizeof(nodeData), 0)) <= 0) {
+      std::cerr << "[ServerWorker] Send failed, removing client" << std::endl; 
+      close(clientSocket); 
+      connectedClientSockets_.erase(clientSocket); 
+      continue; 
+    }
+    nodeData = { 0 }; 
+    //Receive reponse 
+    if ((bytesReceived = recv(clientSocket, &nodeData, sizeof(nodeData), 0)) <= 0) {
+      std::cerr << "[ServerWorker] Response failed, removing client" << std::endl;
+      close(clientSocket); 
+      connectedClientSockets_.erase(clientSocket); 
+      continue;  
+    }
+
+    if(actionFromString(nodeData.action) == ActionType::OK) {
+      return nodeData.port; 
+    }
+
+  }
+
+  return -1; 
 }
 
 int ServerWorker::SetupServer() {
