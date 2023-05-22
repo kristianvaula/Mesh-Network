@@ -77,12 +77,14 @@ Ved fremtidig arbeid er det mulig å ta for seg følgende punkter for å imøtek
 
 ### Server
 
-1. Kompiler serveren og tilhørende filer. Dersom du har g++ kompilatoren installert, kan du fra rotkatalogen bruke kommandoen: `g++ -o Server service/Server.cpp service/IpUtils.cpp model/DoubleLinkedList.cpp model/Node.cpp model/NodeList.cpp model/enums/ActionType.cpp -pthread`
+1. Kompiler serveren og tilhørende filer. Dersom du har g++ kompilatoren installert, kan du fra rotkatalogen bruke kommandoen: 
+`g++ -o Server service/Server.cpp service/IpUtils.cpp model/DoubleLinkedList.cpp model/Node.cpp model/NodeList.cpp model/enums/ActionType.cpp -pthread`
 
 2.	For å kjøre den kompilerte serveren: `./Server`
 
 ### Node
-1. Kompiler serveren og tilhørende filer. Dersom du har g++ kompilatoren installert, kan du fra rotkatalogen bruke kommandoen: `g++ -o Node Node.cpp Worker.cpp ClientWorker.cpp ServerWorker.cpp ../model/enums/ActionType.cpp  -pthread`
+1. Kompiler serveren og tilhørende filer. Dersom du har g++ kompilatoren installert, kan du fra rotkatalogen bruke kommandoen:
+`g++ -o Node Node.cpp Worker.cpp ClientWorker.cpp ServerWorker.cpp ../model/enums/ActionType.cpp  -pthread`
 
 2.	For å kjøre den kompilerte serveren: `./Node`
 
