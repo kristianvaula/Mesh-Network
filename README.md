@@ -1,92 +1,78 @@
-# Mesh network
+# SceneCapture – mobilt trådløst mesh-nettverk
+
+## Introduksjon
+
+SceneCapture er et mobilt trådløst mesh-nettverk designet for dronefilming av scener. Programmet muliggjør tilkobling av noder til en sentral server som styrer dronenes plassering og prioritet. Programmet tar også hensyn til muligheten for å erstatte droner i nettverket. Formålet med programmet er å muliggjøre filming av scener over store områder der kommunikasjon mellom nabo-noder er nødvendig på grunn av avstanden til serveren. Med dette programmet er det mulig å ha en avstand til serveren som overstiger den maksimale kommunikasjonsrekkevidden. 
+
+## Implementert funksjonalitet
+
+Beskrivelsen av implementerte funksjonaliteten er delt inn i to deler. Første beskrives implementert funksjonaliteten som er implementert i serveren, etterfulgt av neste seksjon som tar for seg funksjonaliteten implementert i noden. 
+
+### Server - SceneCapture
+
+Serveren til SceneCapture har to hovedfunksjoner, den har mulighet for tilkobling av noder og organisering av noder.
+
+Den første hovedfunksjonaliteten er nodens plassering ved tilkobling til serveren. Serveren bruker trådprogrammering for å håndtere innkommende forbindelser fra klientnoder. Når server mottar en forbindelse, tildeles en tråd for å håndtere denne. Tråden sjekker statusen på mesh-nettverket og bestemmer om noden skal plasseres i mesh-nettverket eller i en pool. Noden vil plasseres i mesh-nettverket dersom mesh-nettverket ikke har nådd sin definerte kapasitet. Hvis maksimal kapasitet er nådd blir nye noder plasser i en pool.  
+
+Den andre hovedfunksjonaliteten er erstatning av noder i mesh-nettverket. Dette oppnås ved å kommunisere med serveren hvilken node skal erstattes i nettverket. Serveren sender deretter en forespørsel til noden i mesh nettverket med høy prioritet. Masternoden i mesh nettverket identifiserer hvilken node i nettverket som skal erstatte noden som ønskes fjernet, og sende denne informasjonen til serveren. Serveren flytter erstatningsnoden til riktig lokasjonen og setter tilhørende prioritet. Noden som blir erstattet, blir nullstilt og plassert i poolen. 
+
+### Node
+
+En node kan fungere både som en server og som en klient, og vil ha ulik funksjonalitet for hver av disse rollene.  
+
+#### Servernode
+
+En servernode består av to hovedfunksjonaliteter, den kan legge til en node i nettverket og håndtere oppgaver fra både klientnoder og fra SceneCapture-serveren. 
+
+Servernoden bruker trådprogrammering og har en dedikert tråd som venter på tilkoblinger fra noder. Hvis den mottar en tilkobling, delegeres det en ny tråd for å legge til noden i nettverket. En node blir kun lagt til hvis den bekreftes som en gyldig node ved å sende en melding med action "HELLO" til servernode. 
+
+Servernoden kan også håndtere oppgaver fra både klienter og SceneCapture-serveren. Instruksjonstråden bruker tilstandsvariabler for å holde oversikt over tilgjengelige oppgaver. Når en oppgave mottas, sjekker node-serveren om oppgaven er til seg selv eller tilhører en annen klient i nettverket. Hvis oppgaven er til seg selv, behandler servernoden oppgaven ved mulighet. Mens hvis oppgaven tilhører en annen klient vil servernoden kringkaste instruksjonen til alle klienter. 
+
+#### Klientnode
+
+En klientnode har mulighet til å koble seg til servernoden. Når tilkoblingen er etablert, lytter klientnoden etter instruksjoner fra servernoden og behandle dem. Hvis klientnoden mottar en instruksjon som ikke er til seg selv, legges instruksjonen til i kø for instruksjoner i node-serveren. 
+
+## Nåværende mangler og svakheter
+
+Levert program er den første versjonen av SceneCapture programmet og har derav noen mangler og svakheter. Her er en liste over identifiserte mangler og svakheter av et ferdig program av SceneCapture og har derav mangler og svakheter:
+
+- Manglende kommunikasjon om behov om erstatning: En node har for øyeblikket ikke mulighet til å kommunisere når den trenger å bli erstattet. 
+
+- Begrenset node plassering: Nåværende implementasjon av server plasserer noder i en dimensjon. Dette begrenser muligheten for at droner kan dekke flere kameravinkler. 
+
+- Oppdatering av noder ved erstatning: Når en node erstattes i nettverket, vil serveren gå gjennom alle noder og oppdatere deres posisjon og prioritet. Dette kan bli en tidkrevende prosess dersom nettverket tillater et stort antall noder. 
+
+- Manglende brukervennlig applikasjon: Det mangler en dedikert applikasjon for programmet som kan gjøre det mer brukervennlig for brukere. 
+
+## Fremtidig arbeid
+
+Ved fremtidig arbeid er det mulig å ta for seg følgende punkter for å imøtekomme nevnte mangler og svakheter:
+
+- Selvinitiert kommunikasjon for noden: En mulig forbedring er å gi noden evnen til å kommunisere når den trenger å bli erstattet. For eksempel kan noden automatisk sende en forespørsel om å bli erstattet når batteristatusen faller under en bestemt prosentandel.  
+
+- Utvidelse til flere dimensjoner: For å dekke flere kameravinkler og optimalisere plasseringen av noder i scenen er det mulig å implementere funksjonalitet for plassering av noder i flere dimensjoner. 
+
+- Optimalisering av oppdateringsfunksjonalitet: For å gjøre programmet mer effektivt kan funksjonaliteten for oppdatering av posisjon og prioritet til noder forbedres. De nåværende kompleksiteten er O(n), det er iallfall mulig å redusere den til O(n/2) ved å utføre optimaliseringer.
+
+- Utvikling av brukervennlig applikasjon: For å gjøre programmet mer brukervennlig, er det mulig å utvikle en tilhørende applikasjon for brukerne. 
+
+## Installasjonsinstruksjoner
+
+For å kjøre programmet er det nødvendig å kjøre det i en Linux terminal. Deretter kan en følge trinnene nedenfor:
+
+1. Klone repositoriet fra GitLab eller pakk ut programmet fra zip-filen.
+
+### Server
+
+1. Kompiler serveren og tilhørende filer. Hvis du står i rotkatalogen og har g++ kompilatoren installert, kan du bruke følgende kommando: `g++ -o Server service/Server.cpp service/IpUtils.cpp model/DoubleLinkedList.cpp model/Node.cpp model/NodeList.cpp model/enums/ActionType.cpp -pthread`
+
+2.	Kjør serveren. Hvis du brukte kommandoen ovenfor for kompilering, kan du gjøre følgende: `./Server`
+
+### Klient
 
 
+## Instruksjoner for å bruke løsningen
 
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab.stud.idi.ntnu.no/hmasheim/mesh-network.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab.stud.idi.ntnu.no/hmasheim/mesh-network/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## Team medlemmer
+- `Kristian Vaula Jensen`
+- `Hans Magne Asheim`
