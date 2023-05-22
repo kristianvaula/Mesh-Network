@@ -142,14 +142,7 @@ private:
 
     //TODO: reduce nested if statements
     void handleConnection(int new_socket) {
-        int valread;
-        char buffer[1024] = { 0 };
         bool clientConnection = true;
-        char x;
-        std::string hello = "Hello from server";
-        send(new_socket, hello.c_str(), hello.length(), 0);
-        valread = read(new_socket, buffer, sizeof(buffer));
-        printf("%s\n", buffer);
 
         while (clientConnection) {
             NodeData nodeData = {0};
