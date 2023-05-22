@@ -1,13 +1,13 @@
 #include "ClientWorker.hpp"
 
-ClientWorker::ClientWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<int>* xPosition, std::atomic<bool>* instructionSucceeded,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
-: xPosition_(xPosition), Worker(nodeId, port, instructionSucceeded, messageQueue, messageMutex,cv){
+ClientWorker::ClientWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<int>* xPosition, std::atomic<bool>* instructionSucceeded,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+: xPosition_(xPosition), Worker(nodeId, port, running, instructionSucceeded, messageQueue, messageMutex,cv){
 }
 
 ClientWorker::~ClientWorker() {}
 
 void ClientWorker::RunClient(const std::string& serverPort) {
-  running_.store(true); 
+  running_->store(true); 
 
   SetServerport(serverPort);  
   if (Connect() != 0) {
@@ -18,7 +18,32 @@ void ClientWorker::RunClient(const std::string& serverPort) {
   int bytesRead; 
   bool passthrough; 
 
-  while (running_.load()) {
+  //Set timeout
+  timeval timeout; 
+  timeout.tv_sec = 3; 
+  timeout.tv_usec = 0; 
+
+  while (running_->load()) {
+    timeval timeoutCopy = timeout; 
+
+    fd_set readfds; 
+    FD_ZERO(&readfds); 
+    FD_SET(socket_, &readfds); 
+
+    int selectResult = select(socket_+1, &readfds, nullptr, nullptr, &timeout); 
+  
+    if (selectResult == -1) {
+      std::cerr << "[HandlerThread] Error in select" << std::endl;
+      close(socket_);
+      return;
+    }
+
+    if (selectResult == 0) {
+      std::cout << "[HandlerThread] Receive timeout" << std::endl;
+      close(socket_);
+      return;
+    }
+
     //Read nodeData
     bytesRead = recv(socket_, &nodeData, sizeof(nodeData), 0); 
     if(bytesRead > 0) {

@@ -2,8 +2,8 @@
 /*
 Constructor
 */
-Worker::Worker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* instructionSucceeded, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
-  : nodeId_(nodeId), port_(port), instructionSucceeded_(instructionSucceeded), messageQueue_(messageQueue), messageMutex_(messageMutex), cv_(cv), workerMutex_(), running_(true), socket_(-1) {}
+Worker::Worker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<bool>* instructionSucceeded, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+  : nodeId_(nodeId), port_(port), instructionSucceeded_(instructionSucceeded), messageQueue_(messageQueue), messageMutex_(messageMutex), cv_(cv), workerMutex_(), running_(running), socket_(-1) {}
 
 /*
 Deconstructor
@@ -44,5 +44,6 @@ void Worker::SetServerport(const std::string& serverPort) {
 Changes running_ to false to stop running thread
 */
 void Worker::Stop() {
-    running_.store(false);
+    running_->store(false);
+    cv_->notify_all(); 
 }
