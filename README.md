@@ -2,7 +2,7 @@
 
 ## Introduksjon
 
-Mesh Network er et mobilt trådløst mesh-nettverk designet for kontrollering av noder i en dimensjon. Programmet legger til rette for tilkobling av noder til en sentral server. Denne styrer nodens plassering i mesh-nettverket og hvilken prioritet noden har. Programmet gjør det også mulig å erstatte droner i nettverket. Formålet med programmet er å skape et nettverk der mobile enheter danner et mesh-nettverk og kan kommunisere gjennom hverandre. Dette kan benyttes i for eksempel droner og andre nettverksstyrte mobile enheter. I full skala skal programmet gjøre det mulig å plassere enheter over større områder, der kommunikasjon mellom nabo-noder er nødvendig på grunn av avstanden til hovedserveren.  
+Mesh Network er et mobilt trådløst mesh-nettverk designet for kontrollering av noder i en dimensjon. Programmet legger til rette for tilkobling av noder til en sentral server. Denne styrer nodens plassering i mesh-nettverket og hvilken prioritet noden har. Programmet gjør det også mulig å erstatte noder i nettverket. Formålet med programmet er å skape et nettverk der mobile enheter danner et mesh-nettverk og kan kommunisere gjennom hverandre. Dette kan benyttes i for eksempel droner og andre nettverksstyrte mobile enheter. I full skala skal programmet gjøre det mulig å plassere enheter over større områder, der kommunikasjon mellom nabo-noder er nødvendig på grunn av avstanden til hovedserveren.  
 
 ## Implementert funksjonalitet
 
@@ -14,7 +14,7 @@ Serveren til applikasjonen har to hovedfunksjoner, den har mulighet for tilkobli
 
 Den første hovedfunksjonaliteten er nodens plassering ved tilkobling til serveren. Serveren bruker trådprogrammering for å håndtere innkommende forbindelser fra klientnoder. Når server mottar en forbindelse, tildeles en tråd for å håndtere denne. Tråden sjekker statusen på mesh-nettverket og bestemmer om noden skal plasseres i mesh-nettverket eller i en pool. Noden vil plasseres i mesh-nettverket dersom mesh-nettverket ikke har nådd sin definerte kapasitet. Hvis maksimal kapasitet er nådd blir nye noder plasser i en pool.  
 
-Den andre hovedfunksjonaliteten er erstatning av noder i mesh-nettverket. Dette oppnås ved å kommunisere med serveren hvilken node skal erstattes i nettverket. Serveren sender deretter en forespørsel til noden i mesh nettverket med høy prioritet. Masternoden i mesh nettverket identifiserer hvilken node i nettverket som skal erstatte noden som ønskes fjernet, og sende denne informasjonen til serveren. Serveren flytter erstatningsnoden til riktig lokasjonen og setter tilhørende prioritet. Noden som blir erstattet, blir nullstilt og plassert i poolen. 
+Den andre hovedfunksjonaliteten er erstatning av noder i mesh-nettverket. Dette oppnås ved å kommunisere med serveren hvilken node som skal erstattes i nettverket. Serveren sender deretter en forespørsel til noden i mesh nettverket med høy prioritet. Masternoden i mesh nettverket identifiserer hvilken node i nettverket som skal erstatte noden som ønskes fjernet, og sender denne informasjonen til serveren. Serveren flytter erstatningsnoden til riktig lokasjonen og setter tilhørende prioritet. Noden som blir erstattet, blir nullstilt og plassert i poolen. 
 
 ### Node
 
@@ -36,7 +36,7 @@ Superklasse som de andre workerklassene arver av. Definerer delt data og enkelte
 
 ## Nåværende mangler og svakheter
 
-Levert program er den første versjonen av SceneCapture programmet og har derav noen mangler og svakheter. Her er en liste over identifiserte mangler og svakheter av et ferdig program av SceneCapture og har derav mangler og svakheter:
+Levert program er den første versjonen av programmet og har derav noen mangler og svakheter. Her er en liste over identifiserte mangler og svakheter:
 
 - Simulert Bevegelse: Løsningen vår tar ikke høyde for å styre de mobile enhetene. Hver node har en verdi for sin plassering langs x-aksen for å simulere bevegelsen og kommunikasjonen mellom entitetene som avgjør denne posisjonen. Det benyttes også en metode for å simulere bevegelse som kaller på trådens sleep_for metode. 
 
@@ -44,7 +44,7 @@ Levert program er den første versjonen av SceneCapture programmet og har derav 
 
 - Manglende kommunikasjon om behov for erstatning: En node har for øyeblikket ikke mulighet til å kommunisere når den trenger å bli erstattet. 
 
-- Begrenset node plassering: Nåværende implementasjon av server plasserer noder i en dimensjon. Dette begrenser muligheten for at droner kan dekke flere vinkler. 
+- Begrenset node plassering: Nåværende implementasjon av server plasserer noder i en dimensjon.
 
 - Oppdatering av noder ved erstatning: Når en node erstattes i nettverket, vil serveren gå gjennom alle noder og oppdatere deres posisjon og prioritet. Dette kan bli en tidkrevende prosess dersom nettverket tillater et stort antall noder. 
 
@@ -60,7 +60,7 @@ Ved fremtidig arbeid er det mulig å ta for seg følgende punkter for å imøtek
 
 - Selvinitiert kommunikasjon for noden: En mulig forbedring er å gi noden evnen til å kommunisere når den trenger å bli erstattet. For eksempel kan noden automatisk sende en forespørsel om å bli erstattet når batteristatusen faller under en bestemt prosentandel. Dette vil kreve en utvidelse av noden som tillater at klienten også kan sende meldinger mot en tjener.  
 
-- Utvidelse til flere dimensjoner: For å dekke flere kameravinkler og optimalisere plasseringen av noder i scenen er det mulig å implementere funksjonalitet for plassering av noder i flere dimensjoner. 
+- Utvidelse til flere dimensjoner: For å skape en mer realistisk implementasjon. 
 
 - Optimalisering av oppdateringsfunksjonalitet: For å gjøre programmet mer effektivt kan funksjonaliteten for oppdatering av posisjon og prioritet til noder forbedres. De nåværende kompleksiteten er O(n), det er iallfall mulig å redusere den til O(n/2) ved å utføre optimaliseringer.
 
