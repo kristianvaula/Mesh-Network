@@ -28,14 +28,6 @@ Node* NodeList::getNode(const int nodeId) {
     return nullptr;
 }
 
-/*
-void NodeList::editNode(Node* node) {
-    if (node && nodes.count(node->getNodeId()) > 0) {
-        nodes[node->getNodeId()] = node;
-    }
-}
-*/
-
 int NodeList::getSize() const {
     return nodes.size();
 }
@@ -66,13 +58,13 @@ int NodeList::getSocketToMasterNode() const {
 void NodeList::setPriority(Node* node) {
     if (node->getXPosition() == 0) {
         node->setPriority(Priority::HIGH);
-        std::cout << "Sets HIGH priority for nodeId: " << node->getNodeId() << std::endl;
+        std::cout << "[NodeList] Sets HIGH priority for nodeId: " << node->getNodeId() << std::endl;
     } else if (node->getXPosition() == 1 || node->getXPosition() == -1) {
         node->setPriority(Priority::MEDIUM);
-        std::cout << "Sets MEDIUM priority for nodeId: " << node->getNodeId() << std::endl;
+        std::cout << "[NodeList] Sets MEDIUM priority for nodeId: " << node->getNodeId() << std::endl;
     } else {
         node->setPriority(Priority::LOW);
-        std::cout << "Sets LOW priority for nodeId: " << node->getNodeId() << std::endl;
+        std::cout << "[NodeList] Sets LOW priority for nodeId: " << node->getNodeId() << std::endl;
     }
 }
 
@@ -82,25 +74,18 @@ Node* NodeList::addNodeToMesh(Node& node) {
         this->meshNetwork.insertEnd(nodeListItem);
         if(nodeListItem->prev != nullptr) {
             nodeListItem->setXPosition(nodeListItem->prev->getXPosition() + 1);
-            std::cout << "Previous nodeid: " << nodeListItem->prev->getNodeId() << std::endl
-            << "My nodeId " << nodeListItem->getNodeId() << std::endl;;
-            std::cout << "Sets xPostion " << nodeListItem->prev->getXPosition() + 1 << std::endl;
         } 
         this->insertRight = false;
     } else {
         this->meshNetwork.insertFront(nodeListItem);
         if(nodeListItem->next != nullptr) {
             nodeListItem->setXPosition(nodeListItem->next->getXPosition() - 1);
-            std::cout << "Next nodeid: " << nodeListItem->next->getNodeId() << std::endl
-            << "My nodeId " << nodeListItem->getNodeId() << std::endl;
-            std::cout << "Sets xPostion " << nodeListItem->next->getXPosition() - 1 << std::endl;
         } else {//master node
             nodeListItem->setXPosition(0);
-            std::cout << "Sets xPostion 0" << std::endl;
         }
         this->insertRight = true;
     }
-
+    std::cout << "[NodeList] Sets xPosition to nodeId: " << nodeListItem->getNodeId() << " to be xpos: " << nodeListItem->getXPosition() << std::endl;
     this->setPriority(nodeListItem);
     return nodeListItem;
 }
@@ -141,18 +126,18 @@ void NodeList::updatePosition() {
         while(currentNode->next) {
             currentNode->next->setXPosition(currentNode->getXPosition() + 1);
             setPriority(currentNode->next);
-            std::cout << "nodeId: " << currentNode->getNodeId() << ", xPosition: " << currentNode->getXPosition() << std::endl;
+            std::cout << "[NodeList] updating positon to nodeId: " << currentNode->getNodeId() << " the xPosition is now: " << currentNode->getXPosition() << std::endl;
             currentNode = currentNode->next;
         }
-        std::cout << "nodeId: " << currentNode->getNodeId() << ", xPosition: " << currentNode->getXPosition() << std::endl;
+        std::cout << "[NodeList] updating positon to nodeId: " << currentNode->getNodeId() << " the xPosition is now: " << currentNode->getXPosition() << std::endl;
         currentNode = highPriorityNode;
         while(currentNode->prev) {
             currentNode->prev->setXPosition(currentNode->getXPosition() - 1);
             setPriority(currentNode->prev);
-            std::cout << "nodeId: " << currentNode->getNodeId() << ", xPosition: " << currentNode->getXPosition() << std::endl;
+            std::cout << "[NodeList] updating positon to nodeId: " << currentNode->getNodeId() << " the xPosition is now: " << currentNode->getXPosition() << std::endl;
             currentNode = currentNode->prev;
         }
-        std::cout << "nodeId: " << currentNode->getNodeId() << ", xPosition: " << currentNode->getXPosition() << std::endl;
+        std::cout << "[NodeList] updating positon to nodeId: " << currentNode->getNodeId() << " the xPosition is now: " << currentNode->getXPosition() << std::endl;
     }
 }
 
@@ -166,12 +151,12 @@ void NodeList::replaceNode(const int nodeId, const int replacementNodeId) {
     Node* node = getNode(nodeId);
     Node* replacementNode = getNode(replacementNodeId);
     if (node != nullptr && replacementNode != nullptr) {
-        std::cout << "Replacing nodeId: " << nodeId << " with replacementNodeId " << replacementNodeId << std:: endl;
+        std::cout << "[NodeList] Replacing nodeId: " << nodeId << " with replacementNodeId " << replacementNodeId << std:: endl;
         copyNodeInformation(node, replacementNode);
         resetNode(node);
         updatePosition();
     } else {
-        std::cerr << "One or both node ids does not exist in the register" << std::endl;
+        std::cerr << "[NodeList] One or both node ids does not exist in the register" << std::endl;
     }
 }
 
@@ -196,10 +181,10 @@ Node* NodeList::getConnectedInnerNode(Node* node) {
     if(node->getXPosition() == 0) {
         return nullptr;
     } else if (node->getXPosition() > 0) {
-        std::cout << "nodeId to connected inner node " << node->prev->getNodeId() << std::endl;
+        std::cout << "[NodeList] The connected inner node for nodeId " << node->getNodeId() << " is nodeId " << node->prev->getNodeId() << std::endl;
         return node->prev;
     }
-    std::cout << "nodeId to connected inner node " << node->next->getNodeId() << std::endl;
+    std::cout << "[NodeList] The connected inner node for nodeId " << node->getNodeId() << " is nodeId " <<  node->next->getNodeId() << std::endl;
     return node->next;
 }
 

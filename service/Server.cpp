@@ -17,7 +17,7 @@
 #include "../model/NodeList.hpp"
 #include "IpUtils.hpp"
 
-#define PORT 1087
+#define PORT 1088
 
 /*
     TODO:

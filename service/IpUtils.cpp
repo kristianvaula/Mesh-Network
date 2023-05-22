@@ -28,6 +28,6 @@ void IpUtils::getIPAddress(char* ipAddressBuffer, int bufferSize) {
 
     const char* ipAddress = inet_ntoa(*((struct in_addr*)host_entry->h_addr_list[0]));
 
-    strncpy(ipAddressBuffer, ipAddress, bufferSize - 1);//Copy the IP address to the provided buffer
-    ipAddressBuffer[bufferSize - 1] = '\0'; //Ensure null-termination
+    strncpy(ipAddressBuffer, ipAddress, bufferSize - 1);
+    ipAddressBuffer[bufferSize - 1] = '\0';
 }

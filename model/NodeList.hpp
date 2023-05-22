@@ -36,7 +36,6 @@ public:
     Node* addNode(const Node&);
     Node* addNode(const NodeData&);
     Node* getNode(const int);
-    //void editNode(Node*);
     int getSize() const;
 
     void setSocketToMasterNode(const int);
