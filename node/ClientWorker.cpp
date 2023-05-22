@@ -1,3 +1,6 @@
+//
+// Created by Kristian Vaula Jensen, May 2023
+//
 #include "ClientWorker.hpp"
 
 ClientWorker::ClientWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<int>* xPosition, std::atomic<int>* instructionFlag,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
@@ -33,7 +36,7 @@ void ClientWorker::RunClient(const std::string& serverPort) {
     int selectResult = select(socket_+1, &readfds, nullptr, nullptr, &timeout); 
   
     if (selectResult == -1) {
-      std::cerr << "[ClientWorker] Error in select" << std::endl;
+      std::cerr << "[Error] Error in select" << std::endl;
       close(socket_);
       return;
     }
@@ -57,35 +60,30 @@ void ClientWorker::RunClient(const std::string& serverPort) {
       }
     }
     else if (bytesRead == 0) {
-      std::cout << "[ClientWorker] Receiveed empty server message" << std::endl;
+      std::cout << "[ Node ] Receiveed empty server message" << std::endl;
       break;  
     }
   }
 
   close(socket_);  
-  std::cout << "[ClientWorker] Client closed" << std::endl; 
+  std::cout << "[ Node ] Client closed" << std::endl; 
 }
 
 void ClientWorker::HandleAction(NodeData& nodeData) {
   ActionType action = actionFromString(nodeData.action); 
-  std::cout << "Action: " << actionToString(action) << std::endl;
   switch (action) {
     case (ActionType::HELLO): // Hello 
       std::cout << "[Server] Hello" << std::endl; 
       break; 
     case (ActionType::MOVETO):// Move to <x> command 
-      std::cout << "[Server] Move To" << std::endl;
+      std::cout << "[Server] Move To Request" << std::endl;
       if (HandleMoveTo(nodeData) != 0){
         SendNone(); 
       } 
       break; 
     case (ActionType::REMOVE_NODE): 
-      std::cout << "[Server] Remove Node" << std::endl;
+      std::cout << "[Server] Remove Request" << std::endl;
       HandleRemoveNode(nodeData); 
-      break; 
-    case (ActionType::REPLACE): 
-      std::cout << "[Server] Replace" << std::endl;
-      SendOK(); 
       break; 
     case (ActionType::OK): 
       std::cout << "[Server] OK" << std::endl;
@@ -97,14 +95,16 @@ void ClientWorker::HandleAction(NodeData& nodeData) {
 }
 
 void ClientWorker::SimulateMovement(int pos) {
-  std::cout << "[Node] Moving to " << pos << "."; 
+  std::cout << "[ Node ] Moving."; 
   for (uint8_t i = 0; i < 3; i++) {
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
     std::cout << "."; 
   }
   std::cout << std::endl; 
-  xPosition_->store(pos); 
-  std::cout << "[Node] Moved Successfully " << std::endl; 
+  if(pos != -1) {
+    xPosition_->store(pos); 
+  }
+  std::cout << "[ Node ] Moved To " << pos << std::endl; 
 }
 
 bool ClientWorker::IsPassthrough(int nodeId) {
@@ -129,7 +129,7 @@ int ClientWorker::Connect() {
 
   socket_ = socket(AF_INET, SOCK_STREAM, 0); 
   if (socket_ == -1) {
-    std::cout << "[ClientWorker] Failed to connect to parent, returning" << std::endl;
+    std::cout << "[ Node ] Failed to connect to parent, returning" << std::endl;
     return 1;
   }
 
@@ -139,18 +139,18 @@ int ClientWorker::Connect() {
   serverAddress.sin_family = AF_INET; 
   serverAddress.sin_port = htons(serverPort); 
   if (inet_pton(AF_INET, "127.0.0.1", &(serverAddress.sin_addr)) <= 0) {
-    std::cerr << "[ClientWorker] Failed to convert address" << std::endl; 
+    std::cerr << "[Error] Failed to convert address" << std::endl; 
     close(socket_); 
     return 1;  
   }
 
   if (connect(socket_, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0){
-    std::cerr << "[ClientWorker] Failed to connect to the server" << std::endl; 
+    std::cerr << "[Error] Failed to connect to the server" << std::endl; 
     close(socket_); 
     return 1; 
   }
 
-  std::cout << "[ClientWorker] Connected to server: " << serverPort << std::endl; 
+  std::cout << "[Error] Connected to server: " << serverPort << std::endl; 
   
   if (SendHello() != 0) {
     close(socket_); 
@@ -165,7 +165,7 @@ int ClientWorker::HandleMoveTo(NodeData& nodeData) {
   int newPort = nodeData.port; 
   std::string action = nodeData.action; 
   //Fetch the destination
-  size_t underscorePos = action.find('_'); 
+  size_t underscorePos = action.rfind('_'); 
   int destination = 0; 
   if (underscorePos != std::string::npos) {
     std::string arg = action.substr(underscorePos+1); 
@@ -174,11 +174,11 @@ int ClientWorker::HandleMoveTo(NodeData& nodeData) {
       destination = std::stoi(arg); 
     }
     catch(std::invalid_argument e){
-      std::cerr << "[ClientWorker] Received invalid positon" << std::endl; 
+      std::cerr << "[Error] Received invalid positon" << std::endl; 
       return 1; 
     }
     catch(std::out_of_range e){
-      std::cerr << "[ClientWorker] Received invalid positon" << std::endl;
+      std::cerr << "[Error] Received invalid positon" << std::endl;
       return 1;  
     }
   }
@@ -189,9 +189,11 @@ int ClientWorker::HandleMoveTo(NodeData& nodeData) {
     port = static_cast<porttype>(newPort); 
   }
   else {
-    std::cerr << "[ClientWorker] Received invalid port" << std::endl;
+    std::cerr << "[ Node ] Received invalid port" << std::endl;
     return 1;  
   }
+
+
 
   SendOK();
   SimulateMovement(destination); 
@@ -215,12 +217,11 @@ int ClientWorker::HandleRemoveNode(NodeData& argData) {
     port = static_cast<porttype>(newPort); 
   }
   else {
-    std::cerr << "[ClientWorker] Received invalid port" << std::endl;
+    std::cerr << "[Error] Received invalid port" << std::endl;
     return 1;  
   }
 
   NodeData nodeData = { 0 }; 
-
 
   std::stringstream ss; 
   ss << actionToString(ActionType::REPLACE_SELF) << "_" << xPosition_->load();  
@@ -228,8 +229,6 @@ int ClientWorker::HandleRemoveNode(NodeData& argData) {
   nodeData.nodeId = nodeId_->load();
   nodeData.port = serverPort_.load(); 
 
-
-  std::cout << "[ClientWorker] Waiting for instructionFlag " << std::endl; 
   int replacerId; 
   {
     const std::chrono::milliseconds timeout(5000); 
@@ -238,15 +237,14 @@ int ClientWorker::HandleRemoveNode(NodeData& argData) {
     std::unique_lock<std::mutex> lock(*messageMutex_); 
     while ((replacerId = instructionFlag_->load()) == -2 && running_->load()){
       if (cv_->wait_until(lock, deadline) == std::cv_status::timeout) {
-        std::cerr << "[ClientWorker] Remove node failure: Timed out." << std::endl;
+        std::cerr << "[Error] Remove node failure: Timed out." << std::endl;
         return 1; 
       }
     }
   }
-  std::cout << "[ClientWorker] ReplacerId: " << replacerId << std::endl; 
 
   if (replacerId == -1) {
-    std::cerr << "[ClientWorker] Remove node failure: Could not find replacement" << std::endl;
+    std::cerr << "[Error] Remove node failure: Could not find replacement" << std::endl;
     return 1; 
   }
   instructionFlag_->store(-2);
@@ -257,12 +255,12 @@ int ClientWorker::HandleRemoveNode(NodeData& argData) {
   serverPort_.store(port); 
 
   if (Connect() != 0) {
-    std::cerr << "[ClientWorker] Remove node failure: Failed to connect to main server" << std::endl;
+    std::cerr << "[Error] Remove node failure: Failed to connect to main server" << std::endl;
     return 1; 
   }
 
   if (SendReplace(replacerId) != 0) {
-    std::cerr << "[ClientWorker] Remove node warning: Failed to send replace" << std::endl;
+    std::cerr << "[Error] Remove node warning: Failed to send replace" << std::endl;
     return 1; 
   }
 
@@ -278,7 +276,7 @@ int ClientWorker::SendResponse(ActionType actionType) {
 
   int bytesSent = send(socket_, &nodeData, sizeof(nodeData), 0);
   if (bytesSent == -1) {
-    std::cerr << "[ClientWorker] Failed to send data" << std::endl;
+    std::cerr << "[Error] Failed to send data" << std::endl;
     return 1;
   }
   return 0;
@@ -307,7 +305,7 @@ int ClientWorker::SendReplace(int replacerId) {
 
   int bytesSent = send(socket_, &nodeData, sizeof(nodeData), 0);
   if (bytesSent == -1) {
-    std::cerr << "[ClientWorker] Failed to send data" << std::endl;
+    std::cerr << "[Error] Failed to send data" << std::endl;
     return 1;
   }
   return 0;

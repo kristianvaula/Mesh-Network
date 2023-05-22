@@ -1,3 +1,6 @@
+//
+// Created by Kristian Vaula Jensen, May 2023
+//
 #include "ClientWorker.hpp"
 #include "ServerWorker.hpp"
 

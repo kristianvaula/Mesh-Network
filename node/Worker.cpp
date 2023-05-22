@@ -1,3 +1,6 @@
+//
+// Created by Kristian Vaula Jensen, May 2023
+//
 #include "Worker.hpp"
 /*
 Constructor
@@ -34,9 +37,9 @@ void Worker::SetServerport(const std::string& serverPort) {
       this->serverPort_ = port; 
     }
   } catch (const std::invalid_argument& e) {
-    std::cerr << "[Worker] Invalid port value: " << serverPort << std::endl; 
+    std::cerr << "[Error] Invalid port value: " << serverPort << std::endl; 
   } catch (const std::out_of_range& e) {
-    std::cerr << "[Worker] Invalid port value: " << serverPort << std::endl; 
+    std::cerr << "[Error] Invalid port value: " << serverPort << std::endl; 
   }
 }
 
