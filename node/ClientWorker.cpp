@@ -193,8 +193,6 @@ int ClientWorker::HandleMoveTo(NodeData& nodeData) {
     return 1;  
   }
 
-
-
   SendOK();
   SimulateMovement(destination); 
 
