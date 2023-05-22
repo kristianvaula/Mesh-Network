@@ -23,6 +23,7 @@ class Node {
   private: 
     int id_;
     int port_; 
+    std::atomic<int> xPosition_; 
     std::thread serverThread_; 
     std::thread clientThread_; 
     ServerWorker serverWorker_; 
@@ -33,7 +34,7 @@ class Node {
 };
 
 Node::Node(int id, int port, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
-: id_(id), port_(port), serverWorker_(&id_, &port_, messageQueue,messageMutex,cv), clientWorker_(&id_, &port_, messageQueue,messageMutex,cv), clientRunning_(false), serverRunning_(false) {
+: id_(id), port_(port), xPosition_(0), serverWorker_(&id_, &port_, messageQueue,messageMutex,cv), clientWorker_(&id_, &port_, &xPosition_, messageQueue,messageMutex,cv), clientRunning_(false), serverRunning_(false) {
 }
 
 Node::~Node() {

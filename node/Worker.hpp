@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <cstring> 
+#include <limits>
 #include <queue>
 #include <chrono>
 
@@ -22,7 +23,7 @@
 #include <condition_variable>
 #include <atomic>
 
-#include "../model/dto/SocketData.h"
+#include "../model/dto/SocketData.hpp"
 #include "../model/enums/ActionType.hpp"
 
 typedef std::uint16_t porttype; 
