@@ -14,7 +14,7 @@ Serveren til applikasjonen har to hovedfunksjoner, den har mulighet for tilkobli
 
 Den første hovedfunksjonaliteten er nodens plassering ved tilkobling til serveren. Serveren bruker trådprogrammering for å håndtere innkommende forbindelser fra klientnoder. Når server mottar en forbindelse, tildeles en tråd for å håndtere denne. Tråden sjekker statusen på mesh-nettverket og bestemmer om noden skal plasseres i mesh-nettverket eller i en pool. Noden vil plasseres i mesh-nettverket dersom mesh-nettverket ikke har nådd sin definerte kapasitet. Hvis maksimal kapasitet er nådd blir nye noder plasser i en pool.  
 
-Den andre hovedfunksjonaliteten er erstatning av noder i mesh-nettverket. Dette oppnås ved å kommunisere med serveren hvilken node som skal erstattes i nettverket. Serveren sender deretter en forespørsel til noden i mesh nettverket med høy prioritet. Masternoden i mesh nettverket identifiserer hvilken node i nettverket som skal erstatte noden som ønskes fjernet, og sender denne informasjonen til serveren. Serveren flytter erstatningsnoden til riktig lokasjonen og setter tilhørende prioritet. Noden som blir erstattet, blir nullstilt og plassert i poolen. 
+Den andre hovedfunksjonaliteten er erstatning av noder i mesh-nettverket. Dette oppnås ved å kommunisere med serveren hvilken node som skal erstattes i nettverket. Serveren sender deretter en forespørsel til noden i mesh nettverket med høy prioritet. Masternoden i mesh nettverket identifiserer hvilken node i nettverket som skal erstatte noden som ønskes fjernet, og sender denne informasjonen til serveren. Serveren flytter erstatningsnoden til riktig lokasjonen og sette tilhørende prioritet. Noden som blir erstattet, blir nullstilt og plassert i poolen. 
 
 ### Node
 
