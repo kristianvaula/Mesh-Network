@@ -13,18 +13,17 @@
 #include <unordered_map>
 #include <mutex>
 #include <atomic>
+#include <cerrno>
+#include <sys/types.h>
+#include <sys/time.h> 
+#include <sys/select.h>
 
 #include "../model/enums/ActionType.hpp"
 #include "../model/NodeList.hpp"
 #include "IpUtils.hpp"
 
-#define PORT 1088
+#define PORT 8084
 
-/*
-    TODO:
-    - Sjekke close_socket: the server socket is never terminated
-    - sjekke joining
-*/
 class Server {
 private:
     std::unordered_map<std::string, ActionType> actionTypes;
@@ -57,9 +56,9 @@ public:
     }
 
     void stop() {
-        run.store(false);
-        cleanup(); //Is this correct placement?
+        cleanup();
         shutdown(server_fd, SHUT_RDWR);
+        close(server_fd);
     }
 
 private:
@@ -104,7 +103,8 @@ private:
             std::cin >> x;
             if (x == 'q') {
                 serverInput = false;
-                stop();
+                run.store(false);
+                break;
             } else if (x == 'r') {
                 int nodeId;
                 std::cout << "[Server] Type in the nodeId to the node you want to remove" << std::endl;
@@ -143,77 +143,99 @@ private:
         int valread;
         bool clientConnection = true;
 
+        //Set timeout
+        timeval timeout; 
+        timeout.tv_sec = 3; 
+        timeout.tv_usec = 0; 
+
         while (clientConnection && run.load()) {
             NodeData nodeData = {0};
-            valread = recv(new_socket, &nodeData, sizeof(nodeData), 0);
 
-            if (valread <= 0) {
-                clientConnection = false;
-                std::cout << "[Server: clientThread] Closing client conection" << std::endl;
-                close(new_socket);
-                return;
-            } 
-            
-            std::cout << "[Server: clientThread] Recieve a message from client" << std::endl;
-            std::cout << "[Server: clientThread] droneId: " << nodeData.nodeId << ", port: " << nodeData.port << ", ipAddress: " << nodeData.ipAddress
-            << ", action: " << nodeData.action << std::endl;
-            
-            ActionType action = actionFromString(nodeData.action);
-            switch(action) {
-                case ActionType::HELLO: {
-                    if (nodeList.isNodeInList(nodeData.nodeId)) {
-                        std::cerr << "[Server: clientThread] The nodeId: " << nodeData.nodeId << " is already registered" << std::endl;
-                        break;
-                    }
+            //Confgure timeout
+            timeval timeoutCopy = timeout; 
 
-                    Node node(nodeData);
-                    {//aquire lock
-                        std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                        if (!nodeList.isMeshFull()) {
-                            nodeList.addNodeToMesh(node);
-                        } else {
-                            nodeList.addNode(node);
+            fd_set readfds; 
+            FD_ZERO(&readfds); 
+            FD_SET(new_socket, &readfds); 
+
+            int selectResult = select(new_socket + 1, &readfds, nullptr, nullptr, &timeoutCopy); 
+            if (selectResult == -1) {
+                std::cerr << "[ServerWorker] Error in select" << std::endl; 
+                break; 
+            }
+            else if (selectResult == 0) {
+                continue; 
+            }
+
+            if (FD_ISSET(new_socket, &readfds)) {  
+                valread = recv(new_socket, &nodeData, sizeof(nodeData), 0);
+
+                if (valread <= 0) {
+                    clientConnection = false;
+                    std::cout << "[Server: clientThread] Closing client conection" << std::endl;
+                    close(new_socket);
+                    return;
+                } 
+                
+                std::cout << "[Server: clientThread] Recieve a message from client" << std::endl;
+                std::cout << "[Server: clientThread] droneId: " << nodeData.nodeId << ", port: " << nodeData.port << ", ipAddress: " << nodeData.ipAddress
+                << ", action: " << nodeData.action << std::endl;
+                
+                ActionType action = actionFromString(nodeData.action);
+                switch(action) {
+                    case ActionType::HELLO: {
+                        if (nodeList.isNodeInList(nodeData.nodeId)) {
+                            std::cerr << "[Server: clientThread] The nodeId: " << nodeData.nodeId << " is already registered" << std::endl;
+                            break;
                         }
-                    }//release lock
 
-                    Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
-                    if (nodeListItem->getPriority() != Priority::NONE) {
-                        NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
-                        send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
-                    }
-                    break;
-                }
-                case ActionType::REPLACE: {
-                    std::string action = std::string(nodeData.action);
-                    size_t underscorePos = action.find('_'); 
-                    if (underscorePos == std::string::npos) {
-                        break;
-                    }
-                    std::string arg = action.substr(underscorePos+1); 
-                    std::cout << "Arg: " << arg << std::endl; 
-                    try{
-                        int replacementNodeId = std::stoi(arg); 
+                        Node node(nodeData);
                         {//aquire lock
                             std::unique_lock<std::mutex> lock(this->nodeList_mutex);
-                            nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
+                            if (!nodeList.isMeshFull()) {
+                                nodeList.addNodeToMesh(node);
+                            } else {
+                                nodeList.addNode(node);
+                            }
                         }//release lock
+
+                        Node* nodeListItem = nodeList.getNode(nodeData.nodeId);
+                        if (nodeListItem->getPriority() != Priority::NONE) {
+                            NodeData formatedNodeData = formatNodeToSend(nodeListItem, new_socket);
+                            send(new_socket, &formatedNodeData, sizeof(formatedNodeData), 0);
+                        }
+                        break;
                     }
-                    catch(std::invalid_argument e){
-                        std::cerr << "[Server: clientThread] Received invalid positon" << std::endl; 
+                    case ActionType::REPLACE: {
+                        std::string action = std::string(nodeData.action);
+                        size_t underscorePos = action.find('_'); 
+                        if (underscorePos == std::string::npos) {
+                            break;
+                        }
+                        std::string arg = action.substr(underscorePos+1); 
+                        std::cout << "Arg: " << arg << std::endl; 
+                        try{
+                            int replacementNodeId = std::stoi(arg); 
+                            {//aquire lock
+                                std::unique_lock<std::mutex> lock(this->nodeList_mutex);
+                                nodeList.replaceNode(nodeData.nodeId, replacementNodeId);
+                            }//release lock
+                        }
+                        catch(std::invalid_argument e){
+                            std::cerr << "[Server: clientThread] Received invalid positon" << std::endl; 
+                        }
+                        catch(std::out_of_range e){
+                            std::cerr << "[Server: clientThread] Received invalid positon" << std::endl;
+                        }
+                        break;
                     }
-                    catch(std::out_of_range e){
-                        std::cerr << "[Server: clientThread] Received invalid positon" << std::endl;
-                    }
-                    break;
+                    default:
+                        break;
                 }
-                default:
-                    break;
             }
         }
 
-        if(!run.load()) {
-            close(new_socket);
-        }
+        close(new_socket);
     }          
 
     void removeNode(int nodeId) {
@@ -240,17 +262,38 @@ private:
         int addrlen = sizeof(address);
         int new_socket;
 
-        while (run.load()) {
-            
+        //Set timeout
+        timeval timeout; 
+        timeout.tv_sec = 3; 
+        timeout.tv_usec = 0; 
 
-            if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
-                perror("new connection failed");
-                exit(EXIT_FAILURE);
+        while (run.load()) {
+            //Confgure timeout
+            timeval timeoutCopy = timeout; 
+
+            fd_set readfds; 
+            FD_ZERO(&readfds); 
+            FD_SET(server_fd, &readfds); 
+            
+            int selectResult = select(server_fd + 1, &readfds, nullptr, nullptr, &timeoutCopy); 
+            if (selectResult == -1) {
+                std::cerr << "[Server] Error in select" << std::endl; 
+                break; 
+            }
+            else if (selectResult == 0) {
+                continue; 
             }
 
-            threads.emplace_back([&] {
-                handleConnection(new_socket);
-            });
+            if (FD_ISSET(server_fd, &readfds)) {
+                if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
+                    perror("new connection failed");
+                    exit(EXIT_FAILURE);
+                }
+
+                threads.emplace_back([&] {
+                    handleConnection(new_socket);
+                });
+            };
         }
 
         if(!run.load()) {
@@ -262,7 +305,9 @@ private:
         for (auto& thread : threads) {
             thread.join();
         }
-        inputThread.join();
+        if (inputThread.joinable()) {
+            inputThread.join();
+        }
     }
 };
 
