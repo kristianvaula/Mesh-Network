@@ -43,7 +43,7 @@ void Node::StopClient() {
     if(clientThread_.joinable()) {
       clientThread_.join(); 
     }
-    std::cout << "[Node] Client joined." << std::endl;
+    std::cout << "[ Node ] Client joined." << std::endl;
   }
 }
 
@@ -53,7 +53,7 @@ void Node::StopServer() {
     if(serverThread_.joinable()) {
       serverThread_.join(); 
     }
-    std::cout << "[Node] Server joined." << std::endl;
+    std::cout << "[ Node ] Server joined." << std::endl;
   }
 }
 
@@ -91,26 +91,26 @@ int main(int argc, char* argv[]) {
   //Delay to ensure server print status before menu
   std::this_thread::sleep_for(std::chrono::milliseconds(400)); 
   while(true) {
-    std::cout << "1. Connect client" << std::endl;
-    std::cout << "2. Exit" << std::endl; 
-    std::cout << "Choose an option: " << std::endl;
-    int choice;
+    std::cout << "[ Node ] 'c' - Connect client" << std::endl;
+    std::cout << "[ Node ] 'q' - Exit" << std::endl; 
+    std::cout << "[ Node ] Choose an option: " << std::endl;
+    char choice;
     std::cin >> choice;
     
-    if (choice == 1 && !node.IsClientRunning()) {
+    if (choice == 'c' && !node.IsClientRunning()) {
       std::string port;
-      std::cout << "Enter server port the client should connect to: ";
+      std::cout << "[ Node ] Enter server port the client should connect to: ";
       std::cin >> port;
       node.StartClient(port); 
     } 
-    else if (choice == 2) {
+    else if (choice == 'q') {
       node.Stop();  
       break; 
     } 
     else {
-      std::cout << "Invalid choice. Please try again." << std::endl;
+      std::cout << "[ Node ] Invalid choice. Please try again." << std::endl;
     }
   }
-  std::cout << "[Node] Shutting down" << std::endl;
+  std::cout << "[ Node ] Shutting down" << std::endl;
   return 0; 
 }

@@ -1,3 +1,6 @@
+//
+// Created by Kristian Vaula Jensen, May 2023
+//
 #include "ServerWorker.hpp"
 
 ServerWorker::ServerWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<int>* instructionFlag, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
@@ -32,7 +35,7 @@ void ServerWorker::RunServer(const std::string& serverPort) {
 
     int selectResult = select(socket_ + 1, &readfds, nullptr, nullptr, &timeoutCopy); 
     if (selectResult == -1) {
-      std::cerr << "[ServerWorker] Error in select" << std::endl; 
+      std::cerr << "[Error] Error in select" << std::endl; 
       break; 
     }
     else if (selectResult == 0) {
@@ -44,17 +47,15 @@ void ServerWorker::RunServer(const std::string& serverPort) {
       socklen_t clientAddressLength = sizeof(clientAddress); 
       int clientSocket = accept(socket_, (struct sockaddr*)&clientAddress, &clientAddressLength);
       if (clientSocket < 0) {
-        std::cerr << "[ServerWorker] Failed to accept client connection" << std::endl;
+        std::cerr << "[Error] Failed to accept client connection" << std::endl;
         continue;
       }
       else {
-        std::cout << "[ServerWorker] Accepted client connection" << std::endl;
+        std::cout << "[ Node ] Accepted client connection" << std::endl;
         std::thread handlerThread(&ServerWorker::HandleClient,this, clientSocket);
         handlerThreads.push_back(std::move(handlerThread)); 
       }
     }
-    
-    std::cout << "[ServerWorker] Running status: " << std::to_string(running_->load()) << std::endl;
   }
 
   for (auto& thread : handlerThreads) {
@@ -68,7 +69,7 @@ void ServerWorker::RunServer(const std::string& serverPort) {
   }
 
   close(socket_); 
-  std::cout << "[ServerWorker] Server closed" << std::endl;
+  std::cout << "[ Node ] Server closed" << std::endl;
   return; 
 }
 
@@ -89,10 +90,6 @@ void ServerWorker::HandleInstructions() {
     while (!messages.empty()) {
       NodeData message = std::move(messages.front()); 
       messages.pop(); 
-      std::cout << 
-        "[ServerWorker] Handling message: action: " << message.action <<
-        ", nodeId: " << message.nodeId << 
-      std::endl; 
 
       //Replace self instruction 
       if (message.nodeId == nodeId_->load() && actionFromString(message.action) == ActionType::REPLACE_SELF){ // Check if message is intended for itself
@@ -105,10 +102,10 @@ void ServerWorker::HandleInstructions() {
             destination = std::stoi(arg); 
           }
           catch(std::invalid_argument e){
-            std::cerr << "[ClientWorker] Received invalid positon" << std::endl; 
+            std::cerr << "[Error] Received invalid positon" << std::endl; 
           }
           catch(std::out_of_range e){
-            std::cerr << "[ClientWorker] Received invalid positon" << std::endl;
+            std::cerr << "[Error] Received invalid positon" << std::endl;
           }
         }
 
@@ -119,12 +116,10 @@ void ServerWorker::HandleInstructions() {
       }
       else { 
         std::unique_lock<std::mutex> lock(clientSocketsMutex_); 
-        std::cout << "[Broadcast] Broadcasting to " << connectedClientSockets_.size() << " clients." << std::endl;
         for(const auto& clientSocket : connectedClientSockets_) {
           int bytesSent = send(clientSocket, &message, sizeof(message), 0);
-          std::cout << "[Broadcast] Message sent, length: " << bytesSent << std::endl; 
           if (bytesSent <= 0) {
-            std::cerr << "[Broadcast] Failed to send message" << std::endl;
+            std::cerr << "[Error] Failed to send message" << std::endl;
             break; 
           }
         }
@@ -135,8 +130,6 @@ void ServerWorker::HandleInstructions() {
 
 void ServerWorker::HandleClient(int clientSocket) {
   NodeData nodeData = { 0 }; 
-  std::cout << "[HandlerThread] Awaiting client hello " << std::endl; 
-
   fd_set readfds; 
   FD_ZERO(&readfds); 
   FD_SET(clientSocket, &readfds); 
@@ -148,13 +141,13 @@ void ServerWorker::HandleClient(int clientSocket) {
   int selectResult = select(clientSocket+1, &readfds, nullptr, nullptr, &timeout); 
   
   if (selectResult == -1) {
-    std::cerr << "[HandlerThread] Error in select" << std::endl;
+    std::cerr << "[Error] Error in select" << std::endl;
     close(clientSocket);
     return;
   }
 
   if (selectResult == 0) {
-    std::cout << "[HandlerThread] Receive timeout" << std::endl;
+    std::cout << "[ Node ] Receive timeout" << std::endl;
     close(clientSocket);
     return;
   }
@@ -174,10 +167,10 @@ void ServerWorker::HandleClient(int clientSocket) {
 }
 
 int ServerWorker::HandleReplaceSelf(int port, int pos) {
-  int bytesSent, bytesReceived = 0; 
+  int bytesSent, replaceMentId, replacementSocket, replacementPort, bytesReceived = 0; 
+  std::stringstream ss; 
   NodeData nodeData = { 0 }; 
   nodeData.nodeId = -1; //All nodes will process this
-  std::stringstream ss; 
   ss << actionToString(ActionType::MOVETO) << "_" << pos;  
   std::strcpy(nodeData.action, ss.str().c_str()); 
   nodeData.port = port; 
@@ -191,10 +184,11 @@ int ServerWorker::HandleReplaceSelf(int port, int pos) {
   }
 
   //Find replacement 
+  std::cout << "[ Node ] Finding Replacement" << std::endl; 
   for(const auto& clientSocket : connectedClientSockets_) {
     //Send request
     if ((bytesSent = send(clientSocket, &nodeData, sizeof(nodeData), 0)) <= 0) {
-      std::cerr << "[ServerWorker] Send failed, removing client" << std::endl; 
+      std::cerr << "[Error] Send failed, removing client" << std::endl; 
       close(clientSocket); 
       connectedClientSockets_.erase(clientSocket); 
       continue; 
@@ -212,32 +206,55 @@ int ServerWorker::HandleReplaceSelf(int port, int pos) {
     int selectResult = select(clientSocket+1, &readfds, nullptr, nullptr, &timeout); 
     
     if (selectResult == -1) {
-      std::cerr << "[HandlerThread] Error in select" << std::endl;
+      std::cerr << "[Error] Error in select" << std::endl;
       close(clientSocket);
       return -1;
     }
 
     if (selectResult == 0) {
-      std::cout << "[HandlerThread] Receive timeout" << std::endl;
+      std::cout << "[ Node ] Receive timeout" << std::endl;
       close(clientSocket);
       return -1;
     }
 
 
     if ((bytesReceived = recv(clientSocket, &nodeData, sizeof(nodeData), 0)) <= 0) {
-      std::cerr << "[ServerWorker] Response failed, removing client" << std::endl;
+      std::cerr << "[Error] Response failed, removing client" << std::endl;
       close(clientSocket); 
       connectedClientSockets_.erase(clientSocket); 
       continue;  
     }
 
     if(actionFromString(nodeData.action) == ActionType::OK) {
-      return nodeData.nodeId; 
+      replaceMentId = nodeData.nodeId; 
+      replacementSocket = clientSocket; 
+      replacementPort = nodeData.port; 
+      break; 
     }
-
   }
 
-  return -1; 
+  nodeData = { 0 }; 
+  nodeData.nodeId = -1; //All nodes will process this
+  ss.str("");
+  ss << actionToString(ActionType::MOVETO) << "_" << -1; //Nodes will not change position
+  std::strcpy(nodeData.action, ss.str().c_str()); 
+  nodeData.port = replacementPort; 
+
+  //Rest of children nodes should change connection to replacement node 
+  for(const auto& clientSocket : connectedClientSockets_) {
+    if (clientSocket == replacementSocket) {
+      continue; 
+    }
+
+    if ((bytesSent = send(clientSocket, &nodeData, sizeof(nodeData), 0)) <= 0) {
+      std::cerr << "[Error] Send failed, removing client" << std::endl; 
+      close(clientSocket); 
+      connectedClientSockets_.erase(clientSocket); 
+      continue; 
+    }
+  }
+
+  return replaceMentId; 
 }
 
 int ServerWorker::SetupServer() {
@@ -249,7 +266,7 @@ int ServerWorker::SetupServer() {
 
   socket_ = socket(AF_INET, SOCK_STREAM, 0);
   if (socket_ == -1) {
-      std::cerr << "[ServerWorker] Failed to create server socket." << std::endl;
+      std::cerr << "[Error] Failed to create server socket." << std::endl;
       return 1;
   }
 
@@ -267,17 +284,17 @@ int ServerWorker::SetupServer() {
   setsockopt(socket_, SOL_SOCKET, SO_RCVTIMEO, reinterpret_cast<const char*>(&timeout), sizeof(timeout)); 
 
   if (bind(socket_, (struct sockaddr*)&serverAddress_, sizeof(serverAddress_)) < 0){
-    std::cerr << "[ServerWorker] Failed to bind server socket" << std::endl;
+    std::cerr << "[Error] Failed to bind server socket" << std::endl;
     close(socket_);
     return 1;
   }
 
   if (listen(socket_, 5) < 0) {
-    std::cerr << "[ServerWorker] Failed to listen on server socket" << std::endl;
+    std::cerr << "[Error] Failed to listen on server socket" << std::endl;
     close(socket_);
     return 1;
   }
 
-  std::cout << "[ServerWorker] Listening on port " << serverPort << std::endl;
+  std::cout << "[ Node ]Listening on port " << serverPort << std::endl;
   return 0; 
 }
