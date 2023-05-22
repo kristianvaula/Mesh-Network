@@ -3,14 +3,14 @@
 //
 #include "Node.hpp"
 
-Node::Node(int id, porttype port, std::atomic<bool>* instructionSucceeded,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+Node::Node(int id, porttype port, std::atomic<int>* instructionFlag,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
 : id_(id), 
   port_(port), 
   xPosition_(0), 
   clientRunning_(false), 
   serverRunning_(false),
-  serverWorker_(&id_, &port_, &serverRunning_, instructionSucceeded, messageQueue,messageMutex,cv),
-  clientWorker_(&id_, &port_, &clientRunning_, &xPosition_, instructionSucceeded, messageQueue,messageMutex,cv)
+  serverWorker_(&id_, &port_, &serverRunning_, instructionFlag, messageQueue,messageMutex,cv),
+  clientWorker_(&id_, &port_, &clientRunning_, &xPosition_, instructionFlag, messageQueue,messageMutex,cv)
   {
     StartServer(); 
   }
@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
   std::queue<NodeData> messageQueue; 
   std::mutex messageMutex; 
   std::condition_variable cv; 
-  std::atomic<bool> instructionSucceeded(false); 
+  std::atomic<int> instructionSucceeded(-2); 
 
   Node node(id, port, &instructionSucceeded, messageQueue, &messageMutex,&cv); 
 

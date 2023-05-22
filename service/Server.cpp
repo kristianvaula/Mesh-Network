@@ -226,7 +226,7 @@ private:
             char ipAddress[256];
             ipUtils.getIPAddress(ipAddress, sizeof(ipAddress));
             strcpy(nodeData.ipAddress, ipAddress);
-            strcpy(nodeData.action, "REMOVE_NODE");
+            strcpy(nodeData.action, actionToString(ActionType::REMOVE_NODE).c_str());
             std::cout << "[Server] droneId: " << nodeData.nodeId << ", port: " << nodeData.port << ", ipAddress: " << nodeData.ipAddress
                 << ", action: " << nodeData.action << std::endl;
             send(masterNode_socket, &nodeData, sizeof(nodeData), 0);

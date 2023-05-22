@@ -1,7 +1,7 @@
 #include "ServerWorker.hpp"
 
-ServerWorker::ServerWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<bool>* instructionSucceeded, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
-: Worker(nodeId, port, running, instructionSucceeded, messageQueue, messageMutex, cv), clientSocketsMutex_(), connectedClientSockets_() {
+ServerWorker::ServerWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<int>* instructionFlag, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+: Worker(nodeId, port, running, instructionFlag, messageQueue, messageMutex, cv), clientSocketsMutex_(), connectedClientSockets_() {
 }
 
 ServerWorker::~ServerWorker() {}
@@ -96,11 +96,26 @@ void ServerWorker::HandleInstructions() {
 
       //Replace self instruction 
       if (message.nodeId == nodeId_->load() && actionFromString(message.action) == ActionType::REPLACE_SELF){ // Check if message is intended for itself
-        if(HandleReplaceSelf(message.port) >= 0) {
-          //Set flag
-          instructionSucceeded_->store(true);
-          cv_->notify_all(); 
+        int destination = 0; 
+        std::string action = message.action; 
+        size_t underscorePos = action.find('_'); 
+        if (underscorePos != std::string::npos) {
+          std::string arg = action.substr(underscorePos+1); 
+          try{
+            destination = std::stoi(arg); 
+          }
+          catch(std::invalid_argument e){
+            std::cerr << "[ClientWorker] Received invalid positon" << std::endl; 
+          }
+          catch(std::out_of_range e){
+            std::cerr << "[ClientWorker] Received invalid positon" << std::endl;
+          }
         }
+
+        int response = HandleReplaceSelf(message.port, destination);
+        instructionFlag_->store(response); 
+        cv_->notify_all(); 
+        
       }
       else { 
         std::unique_lock<std::mutex> lock(clientSocketsMutex_); 
@@ -146,7 +161,6 @@ void ServerWorker::HandleClient(int clientSocket) {
 
   int bytesRead = recv(clientSocket, &nodeData, sizeof(nodeData), 0); 
   if (bytesRead > 0) {
-    std::cout <<  nodeData.action << std::endl; 
     if(actionFromString(nodeData.action) == ActionType::HELLO) {
       {
         std::unique_lock<std::mutex> lock(clientSocketsMutex_); 
@@ -159,19 +173,20 @@ void ServerWorker::HandleClient(int clientSocket) {
   close(clientSocket); 
 }
 
-int ServerWorker::HandleReplaceSelf(int port) {
+int ServerWorker::HandleReplaceSelf(int port, int pos) {
   int bytesSent, bytesReceived = 0; 
   NodeData nodeData = { 0 }; 
   nodeData.nodeId = -1; //All nodes will process this
-  std::string action = actionToString(ActionType::MOVETO); 
-  std::strcpy(nodeData.action, action.c_str()); 
+  std::stringstream ss; 
+  ss << actionToString(ActionType::MOVETO) << "_" << pos;  
+  std::strcpy(nodeData.action, ss.str().c_str()); 
   nodeData.port = port; 
   
   std::unique_lock<std::mutex> lock(clientSocketsMutex_); 
 
   //Check if need replacement 
   if (connectedClientSockets_.size() <= 0) {
-    instructionSucceeded_->store(true); 
+    instructionFlag_->store(0); 
     return 0; 
   }
 
@@ -217,7 +232,7 @@ int ServerWorker::HandleReplaceSelf(int port) {
     }
 
     if(actionFromString(nodeData.action) == ActionType::OK) {
-      return nodeData.port; 
+      return nodeData.nodeId; 
     }
 
   }

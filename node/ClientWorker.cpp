@@ -1,7 +1,7 @@
 #include "ClientWorker.hpp"
 
-ClientWorker::ClientWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<int>* xPosition, std::atomic<bool>* instructionSucceeded,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
-: xPosition_(xPosition), Worker(nodeId, port, running, instructionSucceeded, messageQueue, messageMutex,cv){
+ClientWorker::ClientWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<int>* xPosition, std::atomic<int>* instructionFlag,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+: xPosition_(xPosition), Worker(nodeId, port, running, instructionFlag, messageQueue, messageMutex,cv){
 }
 
 ClientWorker::~ClientWorker() {}
@@ -68,7 +68,7 @@ void ClientWorker::RunClient(const std::string& serverPort) {
 
 void ClientWorker::HandleAction(NodeData& nodeData) {
   ActionType action = actionFromString(nodeData.action); 
-
+  std::cout << "Action: " << actionToString(action) << std::endl;
   switch (action) {
     case (ActionType::HELLO): // Hello 
       std::cout << "[Server] Hello" << std::endl; 
@@ -166,7 +166,7 @@ int ClientWorker::HandleMoveTo(NodeData& nodeData) {
   std::string action = nodeData.action; 
   //Fetch the destination
   size_t underscorePos = action.find('_'); 
-  int destination; 
+  int destination = 0; 
   if (underscorePos != std::string::npos) {
     std::string arg = action.substr(underscorePos+1); 
 
@@ -221,31 +221,35 @@ int ClientWorker::HandleRemoveNode(NodeData& argData) {
 
   NodeData nodeData = { 0 }; 
 
-  std::string action = actionToString(ActionType::REPLACE_SELF); 
-  strcpy(nodeData.action, action.c_str()); 
+
+  std::stringstream ss; 
+  ss << actionToString(ActionType::REPLACE_SELF) << "_" << xPosition_->load();  
+  std::strcpy(nodeData.action, ss.str().c_str()); 
   nodeData.nodeId = nodeId_->load();
   nodeData.port = serverPort_.load(); 
 
-  EnqueueInstruction(nodeData); 
 
+  std::cout << "[ClientWorker] Waiting for instructionFlag " << std::endl; 
+  int replacerId; 
   {
     const std::chrono::milliseconds timeout(5000); 
-    auto deadline = std::chrono::steady_clock::now() + timeout; 
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    EnqueueInstruction(nodeData);  
     std::unique_lock<std::mutex> lock(*messageMutex_); 
-    while (!instructionSucceeded_->load() && running_->load()){
+    while ((replacerId = instructionFlag_->load()) == -2 && running_->load()){
       if (cv_->wait_until(lock, deadline) == std::cv_status::timeout) {
         std::cerr << "[ClientWorker] Remove node failure: Timed out." << std::endl;
         return 1; 
       }
     }
   }
-  
-  if (!instructionSucceeded_->load()) {
+  std::cout << "[ClientWorker] ReplacerId: " << replacerId << std::endl; 
+
+  if (replacerId == -1) {
     std::cerr << "[ClientWorker] Remove node failure: Could not find replacement" << std::endl;
     return 1; 
   }
-
-  instructionSucceeded_->store(false);
+  instructionFlag_->store(-2);
 
   SimulateMovement(0); 
 
@@ -253,8 +257,15 @@ int ClientWorker::HandleRemoveNode(NodeData& argData) {
   serverPort_.store(port); 
 
   if (Connect() != 0) {
+    std::cerr << "[ClientWorker] Remove node failure: Failed to connect to main server" << std::endl;
     return 1; 
   }
+
+  if (SendReplace(replacerId) != 0) {
+    std::cerr << "[ClientWorker] Remove node warning: Failed to send replace" << std::endl;
+    return 1; 
+  }
+
   return 0; 
 }
 
@@ -283,4 +294,21 @@ int ClientWorker::SendNone() {
 
 int ClientWorker::SendOK() {
   return SendResponse(ActionType::OK); 
+}
+
+int ClientWorker::SendReplace(int replacerId) {
+  NodeData nodeData = { 0 };
+  std::stringstream ss; 
+  ss << actionToString(ActionType::REPLACE) << "_" << replacerId;
+  std::string actionStr = ss.str();
+  strcpy(nodeData.action, actionStr.c_str());
+  nodeData.nodeId = nodeId_->load();
+  nodeData.port = port_->load();
+
+  int bytesSent = send(socket_, &nodeData, sizeof(nodeData), 0);
+  if (bytesSent == -1) {
+    std::cerr << "[ClientWorker] Failed to send data" << std::endl;
+    return 1;
+  }
+  return 0;
 }

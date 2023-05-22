@@ -2,8 +2,8 @@
 /*
 Constructor
 */
-Worker::Worker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<bool>* instructionSucceeded, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
-  : nodeId_(nodeId), port_(port), instructionSucceeded_(instructionSucceeded), messageQueue_(messageQueue), messageMutex_(messageMutex), cv_(cv), workerMutex_(), running_(running), socket_(-1) {}
+Worker::Worker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<int>* instructionFlag, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv) 
+  : nodeId_(nodeId), port_(port), instructionFlag_(instructionFlag), messageQueue_(messageQueue), messageMutex_(messageMutex), cv_(cv), workerMutex_(), running_(running), socket_(-1) {}
 
 /*
 Deconstructor

@@ -13,7 +13,7 @@ typedef std::uint16_t porttype;
 
 class ServerWorker : public Worker {
   public:   
-    ServerWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<bool>* instructionSucceeded, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
+    ServerWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<int>* instructionFlag, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
     ~ServerWorker();
 
     void RunServer(const std::string& serverPort); 
@@ -25,7 +25,7 @@ class ServerWorker : public Worker {
 
     void HandleInstructions(); 
     void HandleClient(int clientSocket); 
-    int HandleReplaceSelf(int port);
+    int HandleReplaceSelf(int port, int pos);
     int SetupServer(); 
 };
 #endif //MESH_NETWORK_SERVERWORKER_H

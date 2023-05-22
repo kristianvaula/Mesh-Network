@@ -17,7 +17,7 @@ ActionType actionFromString(const std::string& str) {
         }
     }
 
-    size_t underscorePos = str.find('_');
+    size_t underscorePos = str.rfind('_');
     if (underscorePos != std::string::npos) {
         std::string substring = str.substr(0, underscorePos);
         for (const auto& pair : actionTypeToString) {

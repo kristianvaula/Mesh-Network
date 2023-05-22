@@ -5,7 +5,7 @@ typedef std::uint16_t porttype;
 
 class Node {
   public: 
-    Node(int id, porttype port, std::atomic<bool>* instructionSucceeded, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
+    Node(int id, porttype port, std::atomic<int>* instructionFlag, std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
     ~Node(); 
 
     void Stop(); 

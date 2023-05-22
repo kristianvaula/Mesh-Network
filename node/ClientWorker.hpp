@@ -10,7 +10,7 @@ typedef std::uint16_t porttype;
 
 class ClientWorker : public Worker{
   public: 
-    ClientWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<int>* xPosition, std::atomic<bool>* instructionSucceeded,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
+    ClientWorker(std::atomic<int>* nodeId, std::atomic<porttype>* port, std::atomic<bool>* running, std::atomic<int>* xPosition, std::atomic<int>* instructionFlag,  std::queue<NodeData>& messageQueue, std::mutex* messageMutex, std::condition_variable* cv); 
     ~ClientWorker(); 
 
     void RunClient(const std::string& serverPort); 
@@ -28,6 +28,7 @@ class ClientWorker : public Worker{
     int SendHello();
     int SendNone();  
     int SendOK(); 
+    int SendReplace(int replacerId); 
 };
 
 #endif //MESH_NETWORK_CLIENTWORKER_H
