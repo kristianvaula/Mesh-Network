@@ -8,9 +8,9 @@ Mesh Network er et mobilt trådløst mesh-nettverk designet for kontrollering av
 
 Beskrivelsen av implementerte funksjonaliteten er delt inn i to deler. Første beskrives implementert funksjonaliteten som er implementert i serveren, etterfulgt av neste seksjon som tar for seg funksjonaliteten implementert i noden. 
 
-### Server - SceneCapture
+### Server 
 
-Serveren til SceneCapture har to hovedfunksjoner, den har mulighet for tilkobling av noder og organisering av noder.
+Serveren til applikasjonen har to hovedfunksjoner, den har mulighet for tilkobling av noder og organisering av noder.
 
 Den første hovedfunksjonaliteten er nodens plassering ved tilkobling til serveren. Serveren bruker trådprogrammering for å håndtere innkommende forbindelser fra klientnoder. Når server mottar en forbindelse, tildeles en tråd for å håndtere denne. Tråden sjekker statusen på mesh-nettverket og bestemmer om noden skal plasseres i mesh-nettverket eller i en pool. Noden vil plasseres i mesh-nettverket dersom mesh-nettverket ikke har nådd sin definerte kapasitet. Hvis maksimal kapasitet er nådd blir nye noder plasser i en pool.  
 
