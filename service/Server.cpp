@@ -12,6 +12,7 @@
 #include <thread>
 #include <unordered_map>
 #include <mutex>
+#include <atomic>
 
 #include "../model/enums/ActionType.hpp"
 #include "../model/NodeList.hpp"
@@ -30,7 +31,7 @@ private:
     std::vector<std::thread> threads;
     NodeList nodeList;
     int server_fd;
-    bool run;
+    std::atomic<bool> run;
     std::mutex nodeList_mutex;
     IpUtils ipUtils;
     std::thread inputThread;
@@ -43,7 +44,7 @@ public:
           server_fd(-1),
           nodeList_mutex(),
           ipUtils(),
-          run(true) {};
+          run(true) {}
 
     void start() {
         createSocket();
@@ -53,11 +54,11 @@ public:
             handleServerInput();
         });
         handleConnections();
-        cleanup();
     }
 
     void stop() {
-        run = false;
+        run.store(false);
+        cleanup(); //Is this correct placement?
         shutdown(server_fd, SHUT_RDWR);
     }
 
@@ -138,18 +139,11 @@ private:
         return nodeData;
     }
 
-    //TODO: reduce nested if statements
     void handleConnection(int new_socket) {
         int valread;
-        char buffer[1024] = { 0 };
         bool clientConnection = true;
-        std::string hello = "Hello from server";
-        
-        send(new_socket, hello.c_str(), hello.length(), 0);
-        valread = read(new_socket, buffer, sizeof(buffer));
-        printf("%s\n", buffer);
 
-        while (clientConnection) {
+        while (clientConnection && run.load()) {
             NodeData nodeData = {0};
             valread = recv(new_socket, &nodeData, sizeof(nodeData), 0);
 
@@ -216,6 +210,10 @@ private:
                     break;
             }
         }
+
+        if(!run.load()) {
+            close(new_socket);
+        }
     }          
 
     void removeNode(int nodeId) {
@@ -242,7 +240,9 @@ private:
         int addrlen = sizeof(address);
         int new_socket;
 
-        while (run) {
+        while (run.load()) {
+            
+
             if ((new_socket = accept(server_fd, (struct sockaddr*)&address, (socklen_t*)&addrlen)) < 0) {
                 perror("new connection failed");
                 exit(EXIT_FAILURE);
@@ -251,6 +251,10 @@ private:
             threads.emplace_back([&] {
                 handleConnection(new_socket);
             });
+        }
+
+        if(!run.load()) {
+            stop();
         }
     }
 
