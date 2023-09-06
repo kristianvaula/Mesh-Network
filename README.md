@@ -1,14 +1,15 @@
-# Mesh Network – mobilt trådløst mesh-nettverk
+## Mesh Network – mobilt trådløst mesh-nettverk
+This was our submission for the one week project in the course Network Programming and Computer Communication. This was a voluntary exam and accounted for half the grade basis in the course, as we had a mandatory computer com. exam as well. It was a two man project with a farily open case. The only demand was to produce something regarding mesh networks. Since we wanted to prioritize the learning experience, we decided to try our hands on some C++ programming. The learning curve was quite steap as we had never programmed in C++ before, but we are happy with our little program(even though it's not the most refined code we have created).
 
 ## Introduksjon
 
 Mesh Network er et mobilt trådløst mesh-nettverk designet for kontrollering av noder i en dimensjon. Programmet legger til rette for tilkobling av noder til en sentral server. Denne styrer nodens plassering i mesh-nettverket og hvilken prioritet noden har. Programmet gjør det også mulig å erstatte noder i nettverket. Formålet med programmet er å skape et nettverk der mobile enheter danner et mesh-nettverk og kan kommunisere gjennom hverandre. Dette kan benyttes i for eksempel droner og andre nettverksstyrte mobile enheter. I full skala skal programmet gjøre det mulig å plassere enheter over større områder, der kommunikasjon mellom nabo-noder er nødvendig på grunn av avstanden til hovedserveren.  
 
-## Implementert funksjonalitet
+### Implementert funksjonalitet
 
 Beskrivelsen av implementerte funksjonaliteten er delt inn i to deler. Første beskrives implementert funksjonaliteten som er implementert i serveren, etterfulgt av neste seksjon som tar for seg funksjonaliteten implementert i noden. 
 
-### Server 
+#### Server 
 
 Serveren til applikasjonen har to hovedfunksjoner, den har mulighet for tilkobling av noder og organisering av noder.
 
@@ -16,7 +17,7 @@ Den første hovedfunksjonaliteten er nodens plassering ved tilkobling til server
 
 Den andre hovedfunksjonaliteten er erstatning av noder i mesh-nettverket. Dette oppnås ved å kommunisere med serveren hvilken node som skal erstattes i nettverket. Serveren sender deretter en forespørsel til noden i mesh nettverket med høy prioritet. Masternoden i mesh nettverket identifiserer hvilken node i nettverket som skal erstatte noden som ønskes fjernet, og sender denne informasjonen til serveren. Serveren flytter erstatningsnoden til riktig lokasjonen og sette tilhørende prioritet. Noden som blir erstattet, blir nullstilt og plassert i poolen. 
 
-### Node
+#### Node
 
 En node er en enhet i mesh-nettverket. Den fungerer både som en tjener for andre noder i nettverket, og som en klient enten i en annen node eller i hovedtjeneren.   
 
